@@ -1,0 +1,62 @@
+{
+  "manifest_version": 2,
+  "name": "3D Feature Viewer for UniProt",
+  "version": "2.0.0",
+  "description": "Visualize PTMs and genetic variants on AlphaFold structures directly on UniProt entry pages.",
+  "permissions": [
+    "storage",
+    "https://www.uniprot.org/*",
+    "https://rest.uniprot.org/*",
+    "https://www.ebi.ac.uk/*",
+    "https://alphafold.ebi.ac.uk/*",
+    "https://data.rcsb.org/*",
+    "https://files.rcsb.org/*",
+    "https://swissmodel.expasy.org/*",
+    "https://www.modelarchive.org/*",
+    "https://alphafill.eu/*",
+    "https://pubchem.ncbi.nlm.nih.gov/*",
+    "https://api.platform.opentargets.org/*"
+  ],
+  "content_security_policy": "script-src 'self' 'unsafe-eval'; object-src 'self'",
+  "content_scripts": [
+    {
+      "matches": ["https://www.uniprot.org/uniprotkb*"],
+      "js": [
+        "data.js",
+        "api.js",
+        "state.js",
+        "export.js",
+        "analysis.js",
+        "algorithms.js",
+        "viewer-molstar.js",
+        "modal.js",
+        "injector.js",
+        "content.js"
+      ],
+      "css": ["content.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    "viewer-frame.html",
+    "pocket-worker.js",
+    "algorithms.js"
+  ],
+  "icons": {
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "options_ui": {
+    "page": "options.html"
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "uniprot-3d-viewer@extension",
+      "strict_min_version": "109.0",
+      "data_collection_permissions": {
+        "required": ["none"],
+        "optional": []
+      }
+    }
+  }
+}
