@@ -19,11 +19,10 @@ This guide explains what the extension does and how to use it.
    - [Ligands](#ligands)
    - [Chimeric Partner Regions](#chimeric-partner-regions)
 7. [Color Modes](#color-modes)
-8. [All Pockets: Protein-wide Pocket View](#all-pockets-protein-wide-pocket-view)
-9. [Clicking a Residue: The Details Panel](#clicking-a-residue-the-details-panel)
-10. [Clicking a Ligand: The Ligand Panel](#clicking-a-ligand-the-ligand-panel)
-11. [Exporting Your Results](#exporting-your-results)
-12. [Settings](#settings)
+8. [Clicking a Residue: The Details Panel](#clicking-a-residue-the-details-panel)
+9. [Clicking a Ligand: The Ligand Panel](#clicking-a-ligand-the-ligand-panel)
+10. [Exporting Your Results](#exporting-your-results)
+11. [Settings](#settings)
 
 ---
 
@@ -76,7 +75,7 @@ Which structure type loads by default can be set in [Settings](#settings).
 
 If none of the discovered structures fit, choose **+ Custom PDB…** at the bottom of the structure dropdown. You can load a local `.pdb`/`.ent` file or paste a direct URL. The extension detects the chains present from the file's ATOM records and lists them for you to configure.
 
-For each chain, set:
+Unlike the structures the extension discovers automatically, it has no prior knowledge of which UniProt protein each chain represents or how its residue numbers line up with UniProt's, so for each chain you set:
 - **Accession:** The UniProt accession this chain represents. Type it directly, or pick from suggestions built from the current protein and any structures already loaded, including their partner chains.
 - **Mapping:**
   - **Offset:** Enter the UniProt position that the chain's first residue corresponds to; the rest of the chain is numbered from there.
@@ -159,7 +158,7 @@ Small molecules present in the loaded structure. For AlphaFold models, the exten
 
 ### Chimeric Partner Regions
 
-Some experimental structures splice in a sequence from a different organism or a fusion tag alongside your protein, for example a construct engineered to aid crystallization. When a loaded structure's **⚛** icon indicates this, every annotation panel (PTMs, Variants, Sites, Domains) gains a **Chimeric partner** section listing how many residues in the chain belong to that non-native sequence. Use **All** to gray out those residues in the 3D view, distinguishing them at a glance from residues UniProt actually annotates, or **None** to restore normal coloring. Clicking a chimeric residue shows a short notice instead of annotation data, since UniProt has nothing to report for it.
+Some experimental structures splice in a sequence from a different organism or a fusion tag alongside your protein, for example a construct engineered to aid crystallization. When a loaded structure's **⚛** icon indicates this, every annotation panel (PTMs, Variants, Sites, Domains) shows an additional **Chimeric partner** section listing how many residues in the chain belong to that non-native sequence. Use **All** to gray out those residues in the 3D view, distinguishing them at a glance from residues UniProt actually annotates, or **None** to restore normal coloring. Clicking a chimeric residue shows a short notice instead of annotation data, since UniProt has nothing to report for it.
 
 ---
 
@@ -183,14 +182,6 @@ The **color mode** dropdown changes how the protein backbone is colored. Annotat
 | **Contact-network centrality** | Residues with high betweenness centrality in the Ca-Ca contact graph (8 Å cutoff), computed with Brandes' exact algorithm. High-centrality residues lie on many shortest paths through the contact network and may be relevant to structural communication or stability. |
 | **Recurrent phenotype residues** | Positions that accumulate multiple distinct disease or phenotype labels across independent variant reports, scored by a composite of variant count and phenotype diversity. |
 | **Constraint pocket clusters** | Residue groups forming geometrically buried, evolutionarily constrained cavities, identified using a heuristic analogous to pocket detection methods. A sensitivity slider controls the FDR threshold. |
-
----
-
-## All Pockets: Protein-wide Pocket View
-
-The **All Pockets** button next to the color mode dropdown computes and lists every predicted pocket across the entire protein at once, rather than just the pockets near a single residue (see [Predicted pockets](#binding--pockets) in the residue panel for the per-residue view).
-
-Each pocket in the list shows a color swatch, its AutoSite score, and the number of residues lining it. Click a pocket's zoom button to center the view on it, or toggle **Overlay all** to render every pocket's surface at once, each in its own color, for a protein-wide view of cavity locations. Results are cached per structure and recomputed if you switch to a different one.
 
 ---
 
@@ -242,6 +233,8 @@ Two distance sliders search for PTMs or disease-associated variants within a con
 - A **↗** link next to the section header opens the protein's full record on ProtVar
 
 These are predicted cavities. Their relevance as binding sites depends on additional evidence.
+
+To see every predicted pocket across the whole protein at once, rather than just those near the selected residue, use the **All Pockets** button next to the color mode dropdown. No residue needs to be selected first. It lists every pocket with a color swatch, AutoSite score, and residue count, each with its own zoom button, and an **Overlay all** toggle that renders every pocket's surface at the same time, each in a different color.
 
 **Experimental binding** (from PDBe-KB): Ligand contacts and protein-protein interface residues observed at this position in experimentally determined structures in the PDB. This is direct structural evidence that the position contacts a ligand or an interacting protein. A **↗** link next to the section header opens the protein's page on PDBe-KB.
 
