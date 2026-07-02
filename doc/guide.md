@@ -9,18 +9,21 @@ This guide explains what the extension does and how to use it.
 1. [What This Extension Does](#what-this-extension-does)
 2. [Opening the Viewer](#opening-the-viewer)
 3. [Choosing a Structure](#choosing-a-structure)
-4. [Navigating the 3D View](#navigating-the-3d-view)
-5. [Annotation Panels: What You Can Show on the Structure](#annotation-panels)
+4. [Using Your Own PDB Structure](#using-your-own-pdb-structure)
+5. [Navigating the 3D View](#navigating-the-3d-view)
+6. [Annotation Panels: What You Can Show on the Structure](#annotation-panels)
    - [PTMs](#ptms-post-translational-modifications)
    - [Disease Variants](#disease-variants)
    - [Functional Sites](#functional-sites)
    - [Domains](#domains)
    - [Ligands](#ligands)
-6. [Color Modes](#color-modes)
-7. [Clicking a Residue: The Details Panel](#clicking-a-residue-the-details-panel)
-8. [Clicking a Ligand: The Ligand Panel](#clicking-a-ligand-the-ligand-panel)
-9. [Exporting Your Results](#exporting-your-results)
-10. [Settings](#settings)
+   - [Chimeric Partner Regions](#chimeric-partner-regions)
+7. [Color Modes](#color-modes)
+8. [All Pockets: Protein-wide Pocket View](#all-pockets-protein-wide-pocket-view)
+9. [Clicking a Residue: The Details Panel](#clicking-a-residue-the-details-panel)
+10. [Clicking a Ligand: The Ligand Panel](#clicking-a-ligand-the-ligand-panel)
+11. [Exporting Your Results](#exporting-your-results)
+12. [Settings](#settings)
 
 ---
 
@@ -69,6 +72,21 @@ Which structure type loads by default can be set in [Settings](#settings).
 
 ---
 
+## Using Your Own PDB Structure
+
+If none of the discovered structures fit, choose **+ Custom PDB…** at the bottom of the structure dropdown. You can load a local `.pdb`/`.ent` file or paste a direct URL. The extension detects the chains present from the file's ATOM records and lists them for you to configure.
+
+For each chain, set:
+- **Accession:** The UniProt accession this chain represents. Type it directly, or pick from suggestions built from the current protein and any structures already loaded, including their partner chains.
+- **Mapping:**
+  - **Offset:** Enter the UniProt position that the chain's first residue corresponds to; the rest of the chain is numbered from there.
+  - **Adopt:** Reuse the residue mapping from another already-loaded structure that shares the same accession, useful when your file follows the same numbering as a known PDB entry.
+  - **⊘:** Show the chain in the 3D view without annotations.
+
+Once loaded, a custom structure behaves like any other: annotation layers apply to its mapped chains, and it appears in the structure dropdown labeled "Custom: *filename*". Custom structures are session-only and are not kept after the page is reloaded.
+
+---
+
 ## Navigating the 3D View
 
 **Mouse controls:**
@@ -81,6 +99,10 @@ Which structure type loads by default can be set in [Settings](#settings).
 | Scroll wheel | Zoom in and out |
 | Click and drag | Rotate the structure |
 | Right-click and drag | Pan without rotating |
+
+**Residue markers:** The residue you have selected is marked with a small green sphere. Selecting a different residue keeps a small amber sphere on the previous one, so you can see where you navigated from as you move across the structure.
+
+Hovering over any residue in an experimentally determined structure also shows its PDB author residue number alongside the UniProt position, since the two numbering schemes often differ (cropped constructs, engineered tags, alternate start codons).
 
 **Buttons in the top bar:**
 
@@ -135,6 +157,10 @@ Small molecules present in the loaded structure. For AlphaFold models, the exten
 - The **exclude ions** toggle hides monoatomic ions (Na+, Cl-, Mg2+, etc.) that are often crystallographic rather than functional.
 - Click the zoom button or ligand name to focus the view and open the [Ligand Panel](#clicking-a-ligand-the-ligand-panel).
 
+### Chimeric Partner Regions
+
+Some experimental structures splice in a sequence from a different organism or a fusion tag alongside your protein, for example a construct engineered to aid crystallization. When a loaded structure's **⚛** icon indicates this, every annotation panel (PTMs, Variants, Sites, Domains) gains a **Chimeric partner** section listing how many residues in the chain belong to that non-native sequence. Use **All** to gray out those residues in the 3D view, distinguishing them at a glance from residues UniProt actually annotates, or **None** to restore normal coloring. Clicking a chimeric residue shows a short notice instead of annotation data, since UniProt has nothing to report for it.
+
 ---
 
 ## Color Modes
@@ -160,13 +186,21 @@ The **color mode** dropdown changes how the protein backbone is colored. Annotat
 
 ---
 
+## All Pockets: Protein-wide Pocket View
+
+The **All Pockets** button next to the color mode dropdown computes and lists every predicted pocket across the entire protein at once, rather than just the pockets near a single residue (see [Predicted pockets](#binding--pockets) in the residue panel for the per-residue view).
+
+Each pocket in the list shows a color swatch, its AutoSite score, and the number of residues lining it. Click a pocket's zoom button to center the view on it, or toggle **Overlay all** to render every pocket's surface at once, each in its own color, for a protein-wide view of cavity locations. Results are cached per structure and recomputed if you switch to a different one.
+
+---
+
 ## Clicking a Residue: The Details Panel
 
 Click any modeled residue in the 3D canvas or the sequence strip to open the details panel. It aggregates annotations and predictions for that specific position from multiple sources.
 
 ### Residue header
 
-Shows the three-letter amino acid code and UniProt sequence position (e.g. **ALA 421**). Colored flags indicate which exploratory overlays have flagged this residue:
+Shows the three-letter amino acid code and UniProt sequence position (e.g. **ALA 421**). For experimental structures, the header also lists the PDB author residue number when it differs from the UniProt position (e.g. **ALA 421 · PDB B 423**). Colored flags indicate which exploratory overlays have flagged this residue:
 
 - Red: Pathogenic variant hotspot
 - Orange: Recurrent phenotype residue
@@ -205,10 +239,11 @@ Two distance sliders search for PTMs or disease-associated variants within a con
 - Radius of gyration (a measure of the cavity's spatial extent)
 - Amino acid composition of the pocket lining (fractions hydrophobic, aromatic, acidic, basic, polar)
 - **Find Similar Motifs:** Links to RCSB's structural motif search for this pocket geometry across all PDB structures
+- A **↗** link next to the section header opens the protein's full record on ProtVar
 
 These are predicted cavities. Their relevance as binding sites depends on additional evidence.
 
-**Experimental binding** (from PDBe-KB): Ligand contacts and protein-protein interface residues observed at this position in experimentally determined structures in the PDB. This is direct structural evidence that the position contacts a ligand or an interacting protein.
+**Experimental binding** (from PDBe-KB): Ligand contacts and protein-protein interface residues observed at this position in experimentally determined structures in the PDB. This is direct structural evidence that the position contacts a ligand or an interacting protein. A **↗** link next to the section header opens the protein's page on PDBe-KB.
 
 ### Predictions
 
