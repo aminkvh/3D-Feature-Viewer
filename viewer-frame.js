@@ -64,6 +64,9 @@
     if (m) return (parseInt(m[1]) << 16) | (parseInt(m[2]) << 8) | parseInt(m[3]);
     return 0xd0d0d0;
   }
+  // Colours reserved for the click-tracking spheres (current + previous focused residue). These are
+  // navigation aids, not annotation spheres, so the "show/hide annotation spheres" toggle must not affect them.
+  const TRACKING_COLORS = new Set([colorToInt('#48c78e'), colorToInt('#FFB300')]);
 
   // ---- structure access ----------------------------------------------------------------------
   function currentStructureCell() {
@@ -477,8 +480,8 @@
     _markerHideRefs = [];
     if (hidden) {
       const allBundle = Bundle.fromSelection(Q.generators.atoms({})(new QueryContext(structure)));
-      for (const m of markerByColor.values()) {
-        if (!m.rep) continue;
+      for (const [color, m] of markerByColor) {
+        if (!m.rep || TRACKING_COLORS.has(color)) continue;
         const node = b.to(m.rep).apply(TT, { layers: [{ bundle: allBundle, value: 1, clear: false }] });
         _markerHideRefs.push(node.ref);
       }
