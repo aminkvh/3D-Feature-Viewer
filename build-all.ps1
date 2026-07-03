@@ -28,7 +28,12 @@ function Build-Extension($dest, $manifestSrc) {
     Copy-Item (Join-Path $root 'lib/molstar.css') "$dest/lib/molstar.css" -Force
     Copy-Item (Join-Path $root 'icons/icon48.png')  "$dest/icons/icon48.png"  -Force
     Copy-Item (Join-Path $root 'icons/icon128.png') "$dest/icons/icon128.png" -Force
-    Copy-Item (Join-Path $root $manifestSrc) "$dest/manifest.json" -Force
+    # manifest.json is the single source of truth for version — force it onto the built manifest
+    # instead of trusting $manifestSrc's own version field, which is easy to forget to bump in sync
+    # (manifest.firefox.json's version silently drifted behind manifest.json's for several releases).
+    $manifestObj = Get-Content (Join-Path $root $manifestSrc) -Raw | ConvertFrom-Json
+    $manifestObj.version = $version
+    $manifestObj | ConvertTo-Json -Depth 10 | Set-Content (Join-Path $dest 'manifest.json')
 }
 
 function Zip-Build($srcDir, $zipName) {
