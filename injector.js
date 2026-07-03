@@ -17,6 +17,21 @@ const UFVInjector = (() => {
     window.__UFV_RUNTIME__ = runtime;
     if (!runtime.injectedIds) runtime.injectedIds = new Set(); // ids of buttons we've actually placed
 
+    // Debug isolation switches for diagnosing left-nav scroll-spy interference. Set via devtools console
+    // (persists across reloads, unlike a window global): localStorage.setItem('ufv-debug-no-inject','1')
+    // to skip ALL button DOM insertion, or localStorage.setItem('ufv-debug-no-poll','1') to skip the
+    // MutationObserver + recurring poll (only the one-shot initial burst still runs). Compare marker
+    // settle timing with each flag on/off to isolate whether insertion or background polling is the cause.
+    function debugFlag(key) { try { return localStorage.getItem(key) === '1'; } catch (_) { return false; } }
+    const DEBUG_NO_INJECT = () => debugFlag('ufv-debug-no-inject');
+    const DEBUG_NO_POLL = () => debugFlag('ufv-debug-no-poll');
+    // The recurring poll exists only to catch sections that mount their heading later than the initial
+    // burst (rare, slow lazy-load) — the MutationObserver already re-injects reactively when an already-
+    // placed button gets dropped. Running the poll forever for the entire time the user stays on the entry
+    // page adds indefinite background work with no added benefit past initial page settle. Bounded to 60s.
+    const ENTRY_POLL_INTERVAL_MS = 2000;
+    const ENTRY_POLL_MAX_TICKS = 30;
+
     function getUniProtId() {
         const m = window.location.pathname.match(/\/uniprotkb\/([A-Za-z0-9_-]+)/);
         return m ? m[1].toUpperCase() : null;
@@ -141,6 +156,7 @@ const UFVInjector = (() => {
     }
 
     function injectAllEntryButtons() {
+        if (DEBUG_NO_INJECT()) return; // isolation test: skip all button DOM insertion entirely
         tryInjectPTMButton();
         tryInjectVariantButton();
         tryInjectFeaturesButton();
@@ -181,7 +197,7 @@ const UFVInjector = (() => {
         // MutationObserver: only re-injects when a button is MISSING (React dropped it).
         // Short-circuits immediately when all buttons are present, so it never fires during
         // normal scroll / nav-link highlighting updates — that was what caused the sidebar lag.
-        if (!runtime.observer) {
+        if (!runtime.observer && !DEBUG_NO_POLL()) {
             let _t = null;
             runtime.observer = new MutationObserver(() => {
                 // Re-inject ONLY when a button we previously PLACED was dropped by a React re-render.
@@ -201,8 +217,14 @@ const UFVInjector = (() => {
             runtime.visibilityBound = true;
             document.addEventListener('visibilitychange', () => { if (!document.hidden) injectAllEntryButtons(); });
         }
-        if (!runtime.entryPoll) {
-            runtime.entryPoll = setInterval(injectAllEntryButtons, 2000);
+        // Bounded poll (60s worth of ticks, then self-clears) rather than running for the entire time the
+        // user stays on the entry page — see ENTRY_POLL_MAX_TICKS comment above.
+        if (!runtime.entryPoll && !DEBUG_NO_POLL()) {
+            let ticks = 0;
+            runtime.entryPoll = setInterval(() => {
+                injectAllEntryButtons();
+                if (++ticks >= ENTRY_POLL_MAX_TICKS) { clearInterval(runtime.entryPoll); runtime.entryPoll = null; }
+            }, ENTRY_POLL_INTERVAL_MS);
         }
         // Buttons are layout-neutral (zero-size anchor + absolute button) and the observer no longer churns
         // (see injectedIds), so the extension does NOT perturb UniProt's left-nav scroll-spy. We deliberately
