@@ -28,8 +28,8 @@
 <summary>Install manually from GitHub (latest build)</summary>
 
 1. Go to the [Releases page](../../releases) and download the latest release:
-   - `chrome-extension-v2.0.1.zip` for Chrome
-   - `firefox-extension-v2.0.1.zip` for Firefox
+   - `chrome-extension-v<version>.zip` for Chrome
+   - `firefox-extension-v<version>.zip` for Firefox
 2. Unzip the downloaded file.
 
 **Chrome:**
@@ -67,7 +67,7 @@ See the [doc/](doc/) folder for a full guide to all features.
 
 ## Data and Privacy
 
-The extension runs entirely in the browser with no server-side component. It retrieves data from public resources (UniProt, PDBe, AlphaFold DB, 3D-Beacons, ProtVar, Open Targets, PubChem, AlphaFill). No personal data is collected. See [PRIVACY_POLICY.md](PRIVACY_POLICY.md) for details.
+The extension runs entirely in the browser with no server-side component. It retrieves data from public resources (UniProt, PDBe, AlphaFold DB, 3D-Beacons, RCSB PDB, SWISS-MODEL, ModelArchive, ProtVar, Open Targets, PubChem, AlphaFill). No personal data is collected. See [PRIVACY_POLICY.md](PRIVACY_POLICY.md) for details.
 
 ## License
 
