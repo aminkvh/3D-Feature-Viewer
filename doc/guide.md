@@ -23,6 +23,7 @@ This guide explains what the extension does and how to use it.
 9. [Clicking a Ligand: The Ligand Panel](#clicking-a-ligand-the-ligand-panel)
 10. [Exporting Your Results](#exporting-your-results)
 11. [Settings](#settings)
+12. [PyMOL and VMD Plugins](#pymol-and-vmd-plugins)
 
 ---
 
@@ -308,7 +309,7 @@ A tabular file with one row per UniProt residue position. Columns include: amino
 
 ### PyMOL session
 
-A `.pml` script that reproduces the current view in PyMOL (Schrodinger LLC). The protein cartoon, annotation spheres, ligand representations, and (if a residue is focused) the zoomed selection are all included with the same coloring as the extension. Useful for figure preparation or further analysis.
+For live work in PyMOL or VMD, use the [plugins](#pymol-and-vmd-plugins) instead. A `.pml` script that reproduces the current view in PyMOL (Schrodinger LLC). The protein cartoon, annotation spheres, ligand representations, and (if a residue is focused) the zoomed selection are all included with the same coloring as the extension. Useful for figure preparation or further analysis.
 
 ### VMD session
 
@@ -333,3 +334,16 @@ Open the settings page from your browser's extension management menu. Changes ap
 | **Variant search radius** | Default radius for nearby variant search in the details panel |
 | **Font size** | Text size in the annotation panels |
 | **Show exploratory algorithms** | When off, the four investigational color modes are hidden from the color dropdown |
+
+---
+
+## PyMOL and VMD Plugins
+
+The same annotations, predictors and analyses inside PyMOL and VMD, on any structure you open, including MD trajectories and NMR ensembles. Each plugin has a panel and a matching set of console commands.
+
+- **Annotations:** pick a category, tick rows to show them in 3D, and type in the search box to filter. Double-click a row to zoom.
+- **Colouring and analyses:** domains, AlphaMissense, hotspots, contact hubs, pockets.
+- **Trajectories:** RMSF, distances, pocket dynamics and contact occupancy, plotted per frame.
+- **Export:** per-residue CSV, or a PDB with any score in the B-factor column.
+
+Install and commands: [plugins/README.md](../plugins/README.md).

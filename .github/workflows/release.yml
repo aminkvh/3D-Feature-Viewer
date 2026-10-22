@@ -14,7 +14,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build Chrome and Firefox packages
+      - name: Build extension and plugin packages
         shell: pwsh
         run: ./build-all.ps1
 
@@ -30,3 +30,5 @@ jobs:
           files: |
             chrome-extension-*.zip
             firefox-extension-*.zip
+            pymol-plugin-*.zip
+            vmd-plugin-*.zip

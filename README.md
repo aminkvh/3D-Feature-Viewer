@@ -13,6 +13,7 @@
 - Open Targets tractability and drug evidence per protein.
 - Ligand similarity by CACTVS/Tanimoto fingerprint against AlphaFill transplants.
 - Export residue sets and annotation data to CSV.
+- **PyMOL and VMD plugins:** the same annotations and analyses on your own structures and MD trajectories.
 
 ## Install
 
@@ -23,6 +24,10 @@
 ### Firefox
 
 [Install from Mozilla Add-ons](https://addons.mozilla.org/en-US/firefox/addon/3d-feature-viewer-for-uniprot/)
+
+### PyMOL and VMD
+
+Download `pymol-plugin-v<version>.zip` or `vmd-plugin-v<version>.zip` from the [Releases page](../../releases) and follow [plugins/README.md](plugins/README.md).
 
 <details>
 <summary>Install manually from GitHub (latest build)</summary>
@@ -63,7 +68,7 @@ pwsh ./build-all.ps1
 
 ## Documentation
 
-See the [doc/](doc/) folder for a full guide to all features.
+See the [doc/](doc/) folder for a full guide to all features, and [plugins/](plugins/) for the PyMOL and VMD plugins.
 
 ## Data and Privacy
 
