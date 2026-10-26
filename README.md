@@ -1,6 +1,6 @@
-# 3D Feature Viewer for UniProt [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21040422.svg)](https://doi.org/10.5281/zenodo.21040422)
+# 3D Feature Viewer [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21040422.svg)](https://doi.org/10.5281/zenodo.21040422)
 
-3D Feature Viewer for UniProt is a browser extension that brings structural protein interpretation directly into UniProt. It adds an interactive 3D workspace to UniProt entry pages so users can inspect post-translational modifications, variants, clinical annotations, precomputed variant-effect evidence, ligand context, and structural-context overlays without leaving UniProt.
+3D Feature Viewer is a browser extension that brings structural protein interpretation directly into UniProt. It adds an interactive 3D workspace to UniProt entry pages so users can inspect post-translational modifications, variants, clinical annotations, precomputed variant-effect evidence, ligand context, and structural-context overlays without leaving UniProt.
 
 ![UniProt 3D Viewer Screenshot](icons/Screenshot.png)
 
@@ -51,8 +51,8 @@ Download `pymol-plugin-v<version>.zip` or `vmd-plugin-v<version>.zip` from the [
 
 **Build from source:**
 ```powershell
-git clone https://github.com/aminkvh/3D-Feature-Viewer-for-UniProt.git
-cd 3D-Feature-Viewer-for-UniProt
+git clone https://github.com/aminkvh/3D-Feature-Viewer.git
+cd 3D-Feature-Viewer
 pwsh ./build-all.ps1
 ```
 

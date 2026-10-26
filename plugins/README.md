@@ -3,7 +3,7 @@
 The extension's annotations, predictors and analyses on structures and trajectories you open in
 PyMOL or VMD: PTMs, variants, AlphaMissense, sites, domains, ligands, pockets and more.
 
-Download both from the [Releases page](https://github.com/aminkvh/3D-Feature-Viewer-for-UniProt/releases): `pymol-plugin-v<version>.zip` and `vmd-plugin-v<version>.zip`.
+Download both from the [Releases page](https://github.com/aminkvh/3D-Feature-Viewer/releases): `pymol-plugin-v<version>.zip` and `vmd-plugin-v<version>.zip`.
 
 ## PyMOL
 

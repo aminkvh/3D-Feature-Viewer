@@ -69,4 +69,4 @@ No other permissions are requested or used.
 
 ## Contact
 
-If you have questions or concerns, please open an issue on [GitHub](https://github.com/aminkvh/3D-Feature-Viewer-for-UniProt/issues).
+If you have questions or concerns, please open an issue on [GitHub](https://github.com/aminkvh/3D-Feature-Viewer/issues).

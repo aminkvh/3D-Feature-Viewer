@@ -1,4 +1,4 @@
-# 3D Feature Viewer for UniProt: User Guide
+# 3D Feature Viewer: User Guide
 
 This guide explains what the extension does and how to use it.
 

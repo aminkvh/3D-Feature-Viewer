@@ -1,4 +1,4 @@
-/* UniProt 3D Feature Viewer – Options page */
+/* 3D Feature Viewer – Options page */
 'use strict';
 
 const DEFAULTS = {

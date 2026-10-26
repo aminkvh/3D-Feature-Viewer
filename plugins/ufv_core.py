@@ -146,7 +146,7 @@ ALPHAFILL_JSON = "https://alphafill.eu/v1/aff/{}/json"
 PDBEKB_URL = "https://www.ebi.ac.uk/pdbe/graph-api/uniprot/{}/{}"      # ligand_sites | interface_residues
 OT_GQL = "https://api.platform.opentargets.org/api/v4/graphql"
 
-_USER_AGENT = "UFV-PyMOL-plugin/1.0 (https://github.com/aminkvh/3D-Feature-Viewer-for-UniProt)"
+_USER_AGENT = "UFV-PyMOL-plugin/1.0 (https://github.com/aminkvh/3D-Feature-Viewer)"
 
 # ----------------------------------------------------------------------------------------------
 # Colour tables (mirror data.js)
