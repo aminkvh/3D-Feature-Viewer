@@ -1,5 +1,5 @@
 """
-3D Feature Viewer for UniProt — shared backend (ufv_core.py)
+3D Feature Viewer — shared backend (ufv_core.py)
 =============================================================
 
 Everything that does not need PyMOL: the HTTP layer and on-disk cache, the UniProtKB / EBI Proteins /
@@ -4248,6 +4248,26 @@ def composition_text(comp):
                       for k in ("hydrophobic", "aromatic", "acidic", "basic", "polar"))
 
 
+SPIDER_LABELS = ("Hydrophobic", "Aromatic", "Acidic", "Basic", "Polar")
+
+
+def composition_axes(comp):
+    """Pocket-character radar values: the five residue-class fractions (independent, not a partition)."""
+    if not comp:
+        return []
+    t = comp["total"] or 1
+    return [comp[k] / t for k in ("hydrophobic", "aromatic", "acidic", "basic", "polar")]
+
+
+def spider_img_html(comp, size=168):
+    """<img> for the pocket-character radar. PyMOL's report browser resolves the ufvspider: URL to a drawn image."""
+    ax = composition_axes(comp)
+    if not ax:
+        return ""
+    return ('<img src="ufvspider:%d:%s" width="%d" height="%d" title="%s">'
+            % (size, ",".join("%.4f" % a for a in ax), size, size, composition_text(comp)))
+
+
 def plddt_band(b):
     return "very high" if b >= 90 else "confident" if b >= 70 else "low" if b >= 50 else "very low"
 
@@ -4751,8 +4771,7 @@ def format_report_html(rep, expanded=False, protvar="off"):
                 ev = pocket_evidence(resid, geom_, ann_.get("sites") or [], ann_.get("sequence") or "")
                 bits = []
                 if ev["composition"]:
-                    bits.append('<span title="Residue-class composition of the lining">%s</span>'
-                                % esc(composition_text(ev["composition"])))
+                    bits.append(spider_img_html(ev["composition"], 120))
                 if ev["siteHits"]:
                     bits.append("<span style='color:%s;'>sites: %s</span>" % (SITE_COLOR, esc("; ".join(
                         "%s (%d)" % (h.get("description") or "site", h["position"]) for h in ev["siteHits"][:4]))))
@@ -4920,7 +4939,7 @@ def format_ligand_html(resn, info, instances=1, copies=None, cur=0, aff=None, ev
             row("Functional sites", '<span style="color:%s;">%s</span>' % (SITE_COLOR, esc("; ".join(
                 "%s (%d)" % (h.get("description") or "site", h["position"]) for h in ev["siteHits"]))))
         if ev.get("composition"):
-            row("Pocket character", esc(composition_text(ev["composition"])))
+            row("Pocket character", spider_img_html(ev["composition"]))
         if motif:
             row("Pocket similarity", '<a href="ufv:motif:lig" style="color:#1565c0; text-decoration:none;" '
                                      'title="RCSB Structure Motif Search on this pocket">Find Similar Motifs ↗</a>')
@@ -6944,6 +6963,7 @@ def _vmd_report(a):
             motif = bool(vobj) and len(resid) >= 2 and _structure_motif_ok(vobj)
             pockets.append({"pocketId": pid, "resid": resid, "stats": " - ".join(stats), "motif": motif,
                             "composition": composition_text(ev["composition"]) if ev and ev["composition"] else "",
+                            "axes": composition_axes(ev["composition"]) if ev and ev["composition"] else [],
                             "sites": ["%s (%d)" % (h.get("description") or "site", h["position"]) for h in
                                       (ev["siteHits"] if ev else [])[:4]]})
             rows.append(row("Pocket %s" % pid, " - ".join(stats), "#00897b", pocket=str(pid)))
@@ -8059,7 +8079,7 @@ if __name__ == "__main__":
         os._exit(0)                 # do not wait for worker threads still busy with abandoned requests
     else:
         sys.stderr.write(
-            "3D Feature Viewer for UniProt — backend for the VMD plugin\n"
+            "3D Feature Viewer — backend for the VMD plugin\n"
             "usage:\n"
             "  python ufv_core.py --emit-tcl       <uniprot_id>\n"
             "  python ufv_core.py --emit-sifts     <pdb_id> <uniprot_id>\n"

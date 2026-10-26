@@ -8,28 +8,17 @@ Download both from the [Releases page](https://github.com/aminkvh/3D-Feature-Vie
 ## PyMOL
 
 1. *Plugin → Plugin Manager → Install New Plugin → Choose file…* and pick `pymol-plugin-v<version>.zip` (don't unzip it).
-2. Restart PyMOL and open the panel: *Plugin → 3D Feature Viewer for UniProt*, or type `ufv_gui`.
+2. Restart PyMOL and open the panel: *Plugin → 3D Feature Viewer*, or type `ufv_gui`.
 
 If you installed an older single-file `ufv_pymol.py`, uninstall it first (*Installed Plugins* tab).
 
 ## VMD
 
-Requires VMD 1.9.4+ and Python 3.8+ on the system (numpy optional).
+Requires VMD 1.9.x or VMD 2, and Python 3.8+ on the system (numpy optional).
 
-**Windows:** unzip `vmd-plugin-v<version>.zip`, then in that folder run
-
-```powershell
-powershell -ExecutionPolicy Bypass -File install-vmd.ps1
-```
-
-Start VMD from the new Start-menu shortcut **VMD (3D Feature Viewer)** and open
-*Extensions → Analysis → 3D Feature Viewer for UniProt*.
-
-**macOS / Linux:** unzip to `~/ufv-vmd` and add this line to `~/.vmdrc`:
-
-```tcl
-source ~/ufv-vmd/vmd/ufv_vmd.tcl
-```
+Unzip `vmd-plugin-v<version>.zip` and follow **INSTALL.txt** inside it: one command on Windows
+(`install-vmd.ps1`) or Linux/macOS (`install-vmd.sh`), or a three-line manual setup. The plugin then
+appears under *Extensions → Analysis → 3D Feature Viewer* in your normal VMD, whichever version you have.
 
 If Python isn't found, set it in the VMD console: `ufv_python /path/to/python3`.
 

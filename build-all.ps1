@@ -56,7 +56,7 @@ Zip-Build $firefoxDest "firefox-extension-v$version.zip"
 Write-Host "  firefox-build/ ready" -ForegroundColor Green
 
 # Plugins (plugins/): PyMOL = one package for the Plugin Manager (ufv/__init__.py + ufv/ufv_core.py);
-# VMD = ufv_core.py + vmd/*.tcl + the Windows installer and README.
+# VMD = ufv_core.py + vmd/*.tcl + the Windows / Linux / macOS installers, INSTALL.txt and README.
 Write-Host "Building PyMOL and VMD plugins v$version..." -ForegroundColor Cyan
 $plugins = Join-Path $root 'plugins'
 $stage = Join-Path $root 'plugin-build'
@@ -65,7 +65,7 @@ New-Item -ItemType Directory -Path "$stage/pymol/ufv", "$stage/vmd/vmd" -Force |
 Copy-Item "$plugins/ufv_pymol.py" "$stage/pymol/ufv/__init__.py"
 Copy-Item "$plugins/ufv_core.py"  "$stage/pymol/ufv/ufv_core.py"
 Zip-Build "$stage/pymol" "pymol-plugin-v$version.zip"
-Copy-Item "$plugins/ufv_core.py", "$plugins/install-vmd.ps1", "$plugins/README.md", "$plugins/REFERENCE.md" "$stage/vmd"
+Copy-Item "$plugins/ufv_core.py", "$plugins/install-vmd.ps1", "$plugins/install-vmd.sh", "$plugins/INSTALL.txt", "$plugins/README.md", "$plugins/REFERENCE.md" "$stage/vmd"
 Copy-Item "$plugins/vmd/*.tcl" "$stage/vmd/vmd"
 Zip-Build "$stage/vmd" "vmd-plugin-v$version.zip"
 
@@ -74,7 +74,7 @@ Write-Host "Release packages:" -ForegroundColor Yellow
 Write-Host "  chrome-extension-v$version.zip   — Chrome Web Store / load unpacked"
 Write-Host "  firefox-extension-v$version.zip  — Mozilla Add-ons / load temporary"
 Write-Host "  pymol-plugin-v$version.zip       — PyMOL Plugin Manager"
-Write-Host "  vmd-plugin-v$version.zip         — VMD (see plugins/README.md)"
+Write-Host "  vmd-plugin-v$version.zip         — VMD (see INSTALL.txt inside)"
 Write-Host ""
 Write-Host "Manual load:"
 Write-Host "  Chrome:  chrome://extensions  -> Developer mode -> Load unpacked -> chrome-build/"

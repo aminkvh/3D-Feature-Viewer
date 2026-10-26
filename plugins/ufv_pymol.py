@@ -1,5 +1,5 @@
 """
-3D Feature Viewer for UniProt — PyMOL plugin
+3D Feature Viewer — PyMOL plugin
 ============================================
 
 Brings UniProt residue-level annotations onto a structure or trajectory already
@@ -70,6 +70,7 @@ from __future__ import annotations
 import contextlib
 import functools
 import json
+import math
 import os
 import re
 import sys
@@ -4774,6 +4775,45 @@ def _build_panel_class(QtWidgets, QtCore, QtGui):
         def sizeHint(self):
             return QtCore.QSize(256, max(self.minimumHeight(), 60))
 
+        def loadResource(self, rtype, url):
+            """ufvspider:<px>:<h,a,ac,b,p> -> the pocket-character radar (same plot as the extension)."""
+            if url.scheme() == "ufvspider":
+                try:
+                    px, vals = url.toString()[len("ufvspider:"):].split(":", 1)
+                    return _spider_image(int(px), [float(v) for v in vals.split(",")])
+                except Exception:
+                    return None
+            return super(_ReportBrowser, self).loadResource(rtype, url)
+
+    def _spider_image(size, fracs):
+        """Radar over Hydrophobic / Aromatic / Acidic / Basic / Polar (axes are independent fractions)."""
+        k = 2  # drawn at 2x for sharp edges on the 1x-sized <img>
+        img = QtGui.QImage(size * k, size * k, QtGui.QImage.Format_ARGB32)
+        img.fill(QtCore.Qt.transparent)
+        p = QtGui.QPainter(img); p.setRenderHint(QtGui.QPainter.Antialiasing)
+        p.scale(k, k)
+        cx = cy = size / 2.0; R = size * 48.0 / 168; n = len(fracs)
+        pt = lambda i, r: QtCore.QPointF(cx + r * math.cos(-math.pi / 2 + i * 2 * math.pi / n),
+                                         cy + r * math.sin(-math.pi / 2 + i * 2 * math.pi / n))
+        grid = QtGui.QPen(QtGui.QColor("#cfd6dd")); grid.setWidthF(1)
+        p.setPen(grid); p.setBrush(QtCore.Qt.NoBrush)
+        for f in (0.5, 1.0):
+            p.drawPolygon(QtGui.QPolygonF([pt(i, R * f) for i in range(n)]))
+        font = p.font(); font.setPixelSize(max(8, int(size * 9 / 168))); font.setBold(True); p.setFont(font)
+        for i in range(n):
+            p.setPen(grid); p.drawLine(QtCore.QPointF(cx, cy), pt(i, R))
+            p.setPen(QtGui.QColor("#5f6b76"))
+            c = pt(i, R + size * 15.0 / 168)
+            p.drawText(QtCore.QRectF(c.x() - 30, c.y() - 7, 60, 14), QtCore.Qt.AlignCenter, SPIDER_LABELS[i])
+        poly = QtGui.QPolygonF([pt(i, R * max(0.0, min(1.0, f))) for i, f in enumerate(fracs)])
+        pen = QtGui.QPen(QtGui.QColor("#00bfa5")); pen.setWidthF(2.2)
+        p.setPen(pen); p.setBrush(QtGui.QColor(0, 137, 123, 77)); p.drawPolygon(poly)
+        p.setBrush(QtGui.QColor("#00bfa5"))
+        for q in poly:
+            p.drawEllipse(q, 2.4, 2.4)
+        p.end()
+        return img
+
     def _keep_space(*widgets):
         """Hidden but still laid out: showing / hiding the widget never moves anything else."""
         for w in widgets:
@@ -4958,7 +4998,7 @@ def _build_panel_class(QtWidgets, QtCore, QtGui):
             self._sync_pending = False
             self._pick_timer = None
             self._picker = None
-            self.setWindowTitle("3D Feature Viewer for UniProt")
+            self.setWindowTitle("3D Feature Viewer")
             self.setStyleSheet(_UFV_QSS)
             self._settings = _ufv_settings()
             self._sections = {}
@@ -4981,7 +5021,7 @@ def _build_panel_class(QtWidgets, QtCore, QtGui):
             header = QtWidgets.QWidget(); header.setObjectName("ufvHeader")
             header.setAttribute(QtCore.Qt.WA_StyledBackground, True)
             hl = QtWidgets.QHBoxLayout(header); hl.setContentsMargins(10, 4, 10, 4); hl.setSpacing(8)
-            _title = QtWidgets.QLabel("3D Feature Viewer for UniProt"); _title.setObjectName("ufvTitle")
+            _title = QtWidgets.QLabel("3D Feature Viewer"); _title.setObjectName("ufvTitle")
             _sub = _ElidedLabel("UniProt annotations & predictors on structures and trajectories")
             _sub.setObjectName("ufvSub")
             hl.addWidget(_title); hl.addWidget(_sub, 1)
@@ -6864,7 +6904,7 @@ def __init_plugin__(app=None):
     """PyMOL Plugin Manager entry point."""
     try:
         from pymol.plugins import addmenuitemqt
-        addmenuitemqt("3D Feature Viewer for UniProt", ufv_gui)
+        addmenuitemqt("3D Feature Viewer", ufv_gui)
     except Exception:
         pass
 
@@ -6872,7 +6912,7 @@ def __init_plugin__(app=None):
 if _HAS_PYMOL:
     cmd.extend("ufv_gui", ufv_gui)
 if _HAS_PYMOL and __name__ != "__main__":      # stdout of the CLI backend is Tcl: no banner there
-    print("[UFV] 3D Feature Viewer for UniProt loaded — type 'ufv_gui' to open the panel "
+    print("[UFV] 3D Feature Viewer loaded — type 'ufv_gui' to open the panel "
           "(or 'help ufv_gui'; all commands are 'ufv_*').")
 
 

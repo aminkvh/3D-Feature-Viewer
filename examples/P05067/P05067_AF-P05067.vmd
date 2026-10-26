@@ -1,4 +1,4 @@
-# 3D Feature Viewer for UniProt — VMD session
+# 3D Feature Viewer — VMD session
 # Coloring mode: default
 set _data {HEADER                                            01-AUG-25                     
 TITLE     ALPHAFOLD MONOMER V2.0 PREDICTION FOR AMYLOID-BETA PRECURSOR PROTEIN  

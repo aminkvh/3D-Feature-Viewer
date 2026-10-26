@@ -1,4 +1,4 @@
-# 3D Feature Viewer for UniProt — PyMOL session
+# 3D Feature Viewer — PyMOL session
 # Coloring mode: default
 from pymol import cmd, util
 python

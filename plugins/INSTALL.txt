@@ -1,0 +1,77 @@
+3D Feature Viewer for VMD - how to install
+==========================================
+
+Works with VMD 1.9.x and VMD 2. You also need Python 3.8 or newer on the computer.
+Result: Extensions > Analysis > 3D Feature Viewer in your normal VMD.
+
+
+WINDOWS - automatic (recommended)
+---------------------------------
+1. Unzip vmd-plugin-v<version>.zip anywhere.
+2. Open the unzipped folder, click the address bar, type  powershell  and press Enter.
+3. Paste this and press Enter:
+
+     powershell -ExecutionPolicy Bypass -File install-vmd.ps1
+
+4. Click Yes when Windows asks for permission (it must edit VMD's startup file).
+5. Restart VMD.
+
+The installer finds every VMD on the PC (VMD 1.9.x and VMD 2) and sets up each one.
+VMD installed somewhere unusual? Add its folder (the one that contains vmd.exe):
+
+     powershell -ExecutionPolicy Bypass -File install-vmd.ps1 -VmdDir "D:\Apps\VMD"
+
+To remove it: run the same command with  -Uninstall  at the end.
+
+
+WINDOWS - by hand
+-----------------
+1. Unzip the zip. Copy the files into a folder such as  C:\Users\<you>\3d-feature-viewer
+   so it contains ufv_core.py and a folder named vmd.
+2. Find your VMD folder: right-click your VMD shortcut > Open file location.
+   (Usually C:\Program Files\University of Illinois\VMD  or  ...\VMD2.)
+3. In that folder open  vmd.rc  with Notepad (run Notepad as administrator, or
+   Windows will refuse to save). Add these lines at the very end and save:
+
+     set ::ufv_dir {C:/Users/<you>/3d-feature-viewer}
+     source $::ufv_dir/vmd/ufv_vmd.tcl
+     vmd_install_extension ufv ufv_gui "Analysis/3D Feature Viewer"
+
+   Use forward slashes (/) in the path.
+4. Restart VMD. Repeat steps 2-4 for every VMD you have installed.
+
+
+LINUX and macOS - automatic
+---------------------------
+1. Unzip vmd-plugin-v<version>.zip, open a terminal in that folder.
+2. Run:
+
+     sh install-vmd.sh
+
+3. Restart VMD. To remove it:  sh install-vmd.sh --uninstall
+
+
+LINUX and macOS - by hand
+-------------------------
+1. Copy the unzipped files to  ~/3d-feature-viewer  (it must contain ufv_core.py and the vmd folder).
+2. Open (or create)  ~/.vmdrc  and add at the end:
+
+     set ::ufv_dir $env(HOME)/3d-feature-viewer
+     source $::ufv_dir/vmd/ufv_vmd.tcl
+     vmd_install_extension ufv ufv_gui "Analysis/3D Feature Viewer"
+
+3. Restart VMD.
+
+
+CHECK IT WORKED
+---------------
+Start VMD. The VMD console (Tk console window) should print a line starting with  [UFV] 3D Feature Viewer.
+Open  Extensions > Analysis > 3D Feature Viewer.
+
+
+IF SOMETHING GOES WRONG
+-----------------------
+- Menu entry missing: restart VMD; make sure you edited the vmd.rc of the VMD you actually start.
+- "Python not found": install Python 3.8+ and restart VMD, or type in the VMD console:
+     ufv_python C:/path/to/python.exe
+- Installer says "No VMD found": use the -VmdDir option above.

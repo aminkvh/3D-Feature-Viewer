@@ -539,7 +539,7 @@ proc ::ufv::gui::build {} {
     set S(anncat) all
 
     toplevel $W -bg $C(bg)
-    wm title $W "3D Feature Viewer for UniProt"
+    wm title $W "3D Feature Viewer"
     # Fixed window size: set once (remembered size, else 420 x screen), never driven by the content afterwards.
     # Everything that changes (sections, report, table, trajectory panel) lives in the scrolling body or elides.
     wm geometry $W [geom_initial]
@@ -2224,6 +2224,39 @@ proc ::ufv::gui::rclear {} {
     foreach tg [$t tag names] { if {[string match L* $tg] && [string is integer -strict [string range $tg 1 end]]} { $t tag delete $tg } }
     array unset linkcmd
     set S(nlink) 0
+    foreach w [winfo children $t] { if {[string match *.spider* $w]} { destroy $w } }
+}
+# Pocket-character radar (same plot as the extension) embedded in the report. fracs = hydrophobic aromatic acidic
+# basic polar as 0..1 (independent fractions, not a partition).
+proc ::ufv::gui::rspider {fracs {size 150}} {
+    variable S
+    set t $S(report)
+    set w $t.spider[incr S(nspider)]
+    set bg [$t cget -background]
+    canvas $w -width $size -height $size -bg $bg -highlightthickness 0 -bd 0
+    set cx [expr {$size / 2.0}]; set R [expr {$size * 48.0 / 168}]; set n [llength $fracs]
+    set labels {Hydrophobic Aromatic Acidic Basic Polar}
+    set pi 3.14159265358979
+    foreach f {0.5 1.0} {
+        set pts {}
+        for {set i 0} {$i < $n} {incr i} {
+            set a [expr {-$pi / 2 + $i * 2 * $pi / $n}]
+            lappend pts [expr {$cx + $R * $f * cos($a)}] [expr {$cx + $R * $f * sin($a)}]
+        }
+        $w create polygon {*}$pts -fill {} -outline #cfd6dd
+    }
+    set poly {}
+    for {set i 0} {$i < $n} {incr i} {
+        set a [expr {-$pi / 2 + $i * 2 * $pi / $n}]
+        $w create line $cx $cx [expr {$cx + $R * cos($a)}] [expr {$cx + $R * sin($a)}] -fill #cfd6dd
+        $w create text [expr {$cx + ($R + $size * 15.0 / 168) * cos($a)}] [expr {$cx + ($R + $size * 15.0 / 168) * sin($a)}]             -text [lindex $labels $i] -fill #5f6b76 -font ufvSmall
+        set f [expr {max(0.0, min(1.0, double([lindex $fracs $i])))}]
+        lappend poly [expr {$cx + $R * $f * cos($a)}] [expr {$cx + $R * $f * sin($a)}]
+    }
+    $w create polygon {*}$poly -fill #99d5cf -outline #00bfa5 -width 2 -stipple gray50
+    $w create polygon {*}$poly -fill {} -outline #00bfa5 -width 2
+    foreach {x y} $poly { $w create oval [expr {$x - 2}] [expr {$y - 2}] [expr {$x + 2}] [expr {$y + 2}] -fill #00bfa5 -outline #00bfa5 }
+    $t window create end -window $w -padx 4 -pady 2
 }
 proc ::ufv::gui::rput {text {tags {}}} {
     variable S

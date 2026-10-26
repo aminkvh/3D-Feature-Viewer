@@ -364,7 +364,7 @@ const UFVExport = (() => {
     function buildPymolSession(scene, objName = 'structure') {
         if (!scene) return '';
         const L = [];
-        L.push('# 3D Feature Viewer for UniProt — PyMOL session');
+        L.push('# 3D Feature Viewer — PyMOL session');
         L.push(`# Coloring mode: ${scene.coloringMode}`);
         L.push('from pymol import cmd, util');
         L.push('python');
@@ -495,7 +495,7 @@ const UFVExport = (() => {
     function buildVmdSession(scene, objName = 'structure') {
         if (!scene) return '';
         const L = [];
-        L.push('# 3D Feature Viewer for UniProt — VMD session');
+        L.push('# 3D Feature Viewer — VMD session');
         L.push(`# Coloring mode: ${scene.coloringMode}`);
         L.push(`set _data {${scene.coordinates.replace(/\r\n/g, '\n')}}`);
         // Write the coordinates to a WRITABLE directory. [pwd] is often VMD's install dir (e.g.

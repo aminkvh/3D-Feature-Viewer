@@ -1,4 +1,4 @@
-# 3D Feature Viewer for UniProt — VMD session
+# 3D Feature Viewer — VMD session
 # Coloring mode: default
 set _data {HEADER    MEMBRANE PROTEIN                        09-OCT-18   6HUO              
 TITLE     CRYOEM STRUCTURE OF HUMAN FULL-LENGTH HETEROMERIC ALPHA1BETA3GAMMA2L  

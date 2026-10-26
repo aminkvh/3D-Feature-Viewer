@@ -1,5 +1,5 @@
 # =============================================================================================
-# 3D Feature Viewer for UniProt - VMD plugin (loader)
+# 3D Feature Viewer - VMD plugin (loader)
 # =============================================================================================
 # Projects UniProt residue annotations (PTMs, disease variants, AlphaMissense, functional sites, domains,
 # membrane topology, mutagenesis, mutation burden, structure analyses) onto structures and trajectories in
@@ -59,7 +59,7 @@ proc ::ufv::load_all {} {
             if {![llength [info commands toplevel]]} { error "ufv_gui needs Tk (VMD started without graphics?)" }
             if {[winfo exists .ufv]} { wm deiconify .ufv; raise .ufv; return .ufv }
             toplevel .ufv
-            wm title .ufv "3D Feature Viewer for UniProt"
+            wm title .ufv "3D Feature Viewer"
             label .ufv.l -justify left -padx 12 -pady 12 -text \
                 "The panel is being rebuilt.\nUse the console commands: ufv_fetch, ufv_load, ufv_ptms, ufv_variants, ..."
             pack .ufv.l
@@ -96,10 +96,10 @@ if {$::ufv::lazy && ![info exists ::ufv::loaded]} {
 }
 
 if {[llength [info commands vmd_install_extension]] && [llength [info commands toplevel]]} {
-    catch { vmd_install_extension ufv ufv_gui "Analysis/3D Feature Viewer for UniProt" }
+    catch { vmd_install_extension ufv ufv_gui "Analysis/3D Feature Viewer" }
 }
 
-puts "\[UFV\] 3D Feature Viewer for UniProt $::ufv::version (VMD) [expr {$::ufv::lazy && ![info exists ::ufv::loaded] ? {ready} : {loaded}}] - type 'ufv_gui' for the panel."
+puts "\[UFV\] 3D Feature Viewer $::ufv::version (VMD) [expr {$::ufv::lazy && ![info exists ::ufv::loaded] ? {ready} : {loaded}}] - type 'ufv_gui' for the panel."
 puts "      ufv_fetch <uid> | ufv_load <uid> | ufv_structures | ufv_load_structure <key> | ufv_use ?molid? ?uid?"
 puts "      ufv_map identity|sifts <pdb>|ranges|auto | ufv_chain | ufv_chainmap | ufv_custom"
 puts "      ufv_ptms ufv_variants ufv_sites ufv_mutagenesis ufv_ligands | ufv_domains ufv_topology ufv_alphamissense"

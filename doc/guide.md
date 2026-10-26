@@ -342,7 +342,7 @@ Open the settings page from your browser's extension management menu. Changes ap
 The same annotations, predictors and analyses inside PyMOL and VMD, on any structure you open, including MD trajectories and NMR ensembles. Each plugin has a panel and a matching set of console commands.
 
 - **Annotations:** pick a category, tick rows to show them in 3D, and type in the search box to filter. Double-click a row to zoom.
-- **Colouring and analyses:** domains, AlphaMissense, hotspots, contact hubs, pockets.
+- **Colouring and analyses:** domains, AlphaMissense, hotspots, contact hubs, pockets (with the same pocket-character radar as the extension).
 - **Trajectories:** RMSF, distances, pocket dynamics and contact occupancy, plotted per frame.
 - **Export:** per-residue CSV, or a PDB with any score in the B-factor column.
 
