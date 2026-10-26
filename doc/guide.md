@@ -70,6 +70,10 @@ For multi-chain structures, the **Other chains** button lists partner proteins w
 
 Which structure type loads by default can be set in [Settings](#settings).
 
+### Overlaying other structures
+
+The **Overlay** button in the title row lists the other structures of this protein. Tick up to four to superpose them onto the current structure as translucent, single-colored cartoons, for example to compare an AlphaFold model with an experimental structure, or apo and ligand-bound forms. Each overlay is fitted on the Cα atoms of the residues both structures share (matched by UniProt position, so no sequence alignment is needed), and its Cα RMSD to the current structure is shown next to it. Overlays are for display only: annotations, clicks, and exports stay on the current structure, and switching structures clears them.
+
 ---
 
 ## Using Your Own PDB Structure
@@ -113,7 +117,7 @@ Hovering over any residue in an experimentally determined structure also shows i
 - **Download:** All export options (see [Exporting Your Results](#exporting-your-results)).
 - **✕:** Close the viewer.
 
-**The sequence track** below the 3D canvas shows the full protein sequence as a scrollable strip. Positions are colored to show annotation status. Grey means the residue is not present in the loaded structure; blue means it is modeled. Orange underlines mark PTM sites; red dots mark variant positions. Click any modeled residue to select it and center the 3D view on it.
+**The sequence track** below the 3D canvas shows the full protein sequence as a scrollable strip. Positions are colored to show annotation status. Grey means the residue is not present in the loaded structure; blue means it is modeled. Orange underlines mark PTM sites; red dots mark variant positions. Click any modeled residue to select it and center the 3D view on it. Hovering works both ways: hover a residue in the strip to highlight it in 3D, or hover a residue in 3D to outline it in the strip.
 
 ---
 
@@ -138,7 +142,11 @@ These are amino acid positions where variants have been reported in the context 
 **Filtering options:**
 - **By disease:** Restrict to variants associated with a specific disease.
 - **By consequence:** Filter by annotation confidence. Categories include Likely pathogenic, Predicted deleterious, Uncertain significance, and Likely benign, following ClinVar's classification framework.
-- **By provenance:** Filter by annotation source (ClinVar submissions, published literature, or computational predictors).
+- **By provenance:** Filter by annotation source: UniProt reviewed, ClinVar / ClinGen, cancer somatic studies (COSMIC/TCGA), population cohorts (gnomAD, ExAC, TOPMed, 1000 Genomes), or other large-scale studies.
+- **By allele frequency:** Filter by gnomAD population frequency: no gnomAD frequency, ultra-rare (<0.01%), rare (0.01–1%), or common (≥1%).
+- **By substitution type:** Filter by the physico-chemical character of the amino acid change: stop gained, glycine/proline/cysteine change, charge change, hydrophobicity change, conservative, or other (indels and complex changes).
+
+Every filter section has a **C** button that colors the variant spheres by that section's categories, for example by allele frequency to see where rare variants cluster.
 
 ### Functional Sites
 
@@ -156,6 +164,20 @@ Small molecules present in the loaded structure. For AlphaFold models, the exten
 - For AlphaFill transplants, the donor protein's sequence identity to the query and the source PDB entry are shown. Transplant accuracy is expected to increase with sequence identity, but the placement is a structural inference, not an experimentally determined position for this protein.
 - The **exclude ions** toggle hides monoatomic ions (Na+, Cl-, Mg2+, etc.) that are often crystallographic rather than functional.
 - Click the zoom button or ligand name to focus the view and open the [Ligand Panel](#clicking-a-ligand-the-ligand-panel).
+
+### Custom Annotations
+
+Every annotation panel ends with a **Custom annotations** section for your own residue-level data, such as a list of mutations from your lab, a deep mutational scan, or residues from a screen. Click **Load** and choose a CSV or TSV file:
+
+| Column | Required | Example |
+|---|---|---|
+| `position` (or `residue`, `variant`, `mutation`) | Yes | `123`, `R123W`, `p.Arg123Trp`, or a range `120-130` |
+| `label` (or `category`, `group`) | No | `DMS hit`; each label becomes its own checkable group |
+| `value` (or `score`) | No | `0.92`; shown on hover |
+| `color` | No | `#d55e00`; overrides the group color |
+| `note` (or `description`) | No | free text, shown on hover |
+
+A file without a header row is read as position, label, value. Rows without a valid position are skipped and counted. The annotations appear as spheres in every window, can be shown or hidden by group, and are added as a `custom_annotation` column to the CSV export. They are kept for the current session only.
 
 ### Chimeric Partner Regions
 

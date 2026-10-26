@@ -34,13 +34,13 @@ namespace eval ::ufv {
     variable stubs {ufv_align ufv_alphamissense ufv_backend ufv_bfactor ufv_binding ufv_burden ufv_cartoon
         ufv_chain ufv_chainmap ufv_chimera ufv_clear ufv_contacthubs ufv_core ufv_csv ufv_custom ufv_diseases
         ufv_domains ufv_fetch ufv_focus ufv_gui ufv_hide ufv_hotspots ufv_info ufv_layers ufv_ligand_focus
-        ufv_ligand_identity ufv_ligand_info ufv_ligands ufv_ligands_hide ufv_load ufv_load_structure ufv_map
+        ufv_ligand_identity ufv_ligand_info ufv_ligands ufv_ligands_hide ufv_load ufv_load_annotations ufv_load_structure ufv_map
         ufv_motif_search ufv_mutagenesis ufv_nearby ufv_open_uniprot ufv_partner_layers ufv_partners ufv_pdbekb
         ufv_plddt ufv_pocket_q ufv_pockets ufv_pockets_all ufv_prox ufv_ptms ufv_python ufv_report
         ufv_reset_annotations ufv_resetview ufv_residue ufv_save_bfactor ufv_select ufv_show ufv_show_annotations ufv_show_pocket ufv_sites ufv_structures
         ufv_topology ufv_tractability ufv_traj ufv_traj_annot ufv_traj_bfactor ufv_traj_cancel
         ufv_traj_contacts ufv_traj_csv ufv_traj_dist ufv_traj_engine ufv_traj_frames ufv_traj_gui
-        ufv_traj_nearby ufv_traj_pockets ufv_traj_rmsf ufv_traj_show ufv_traj_tiers ufv_use ufv_variants}
+        ufv_traj_nearby ufv_traj_pockets ufv_traj_rmsf ufv_traj_show ufv_traj_tiers ufv_unload_annotations ufv_use ufv_variants}
 }
 
 # Source every module once (idempotent). Returns 1 when this call loaded them.

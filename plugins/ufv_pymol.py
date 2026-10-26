@@ -45,7 +45,7 @@ Annotate a structure / trajectory YOU already loaded
     ufv_domains traj         # colour the cartoon by domain / region / repeat
     ufv_topology traj        # colour by membrane topology
     ufv_alphamissense traj   # colour by mean AlphaMissense pathogenicity
-    ufv_variants traj, , all, clinvar, AD1;CAA, disease   # filters + colour profile (consequence|disease|provenance)
+    ufv_variants traj, , all, clinvar, AD1;CAA, disease   # filters + colour profile (consequence|disease|provenance|frequency|substitution)
     ufv_diseases             # disease summary (palette colours, counts)
     ufv_hotspots / ufv_contacthubs / ufv_pockets traj      # extension-exact analyses (mulberry32, all-source
     ufv_pocket_q 0.2         #   Brandes, PAE-gated pockets); pocket sensitivity recolours from cache
@@ -939,7 +939,8 @@ _ANN_STYLE = {}     # obj -> {"color": variant colour profile, "dis": disease se
                     #         "prt": partner layer set, "kb": PDBe-KB kind}
 _ANN_LIGS = {}      # obj -> {resn: copies}   (ligand rows; dropped when the object is (re)loaded / cleared)
 _LIG_ROWS = {}      # obj -> set of ligand codes shown by the ligand layer (missing = every ligand)
-ANN_TAGS = {"ptm": "ptm", "var": "var", "site": "site", "mutag": "mutag", "dom": "domr", "prt": "prt", "kb": "kb"}
+ANN_TAGS = {"ptm": "ptm", "var": "var", "site": "site", "mutag": "mutag", "dom": "domr", "prt": "prt", "kb": "kb",
+            "cus": "cus"}
 _ANN_TAG_CAT = {v: k for k, v in ANN_TAGS.items()}
 
 
@@ -1202,7 +1203,7 @@ def ufv_ptms(obj=None, uid=None):
     _ann_set(obj, uid, "ptm", [r["id"] for r in ann_rows(ann, "ptm")])     # = check every PTM row
     _ann_apply(obj, uid, ("ptm",))
     print("[UFV] %s: PTM layer on (%d categories)." % (obj, len({p["color"] for p in ann["ptms"]})))
-VARIANT_COLOR_PROFILES = ("consequence", "disease", "provenance")
+VARIANT_COLOR_PROFILES = ("consequence", "disease", "provenance", "frequency", "substitution")
 
 
 @_undo_paused
@@ -1210,9 +1211,10 @@ def ufv_variants(obj=None, uid=None, only="pathogenic", provenance=None, disease
     """ufv_variants [object [, uniprot_id [, only [, provenance [, disease [, color]]]]]]
     Variant Ca spheres, one per position (its most severe variant). `only` filters by consequence and
     may list several (space separated): pathogenic | benign | uncertain | deleterious | all (default
-    pathogenic). `provenance`: any of reviewed / clinvar / large (default all). `disease`: disease
-    labels separated by ';' (default all; 'none' hides all). `color` = consequence | disease |
-    provenance (the extension's colour profiles; disease = first active disease's palette colour)."""
+    pathogenic). `provenance`: any of reviewed / clinvar / cancer / population / other / large (default
+    all). `disease`: disease labels separated by ';' (default all; 'none' hides all). `color` =
+    consequence | disease | provenance | frequency | substitution (the extension's colour profiles;
+    disease = first active disease's palette colour; frequency = gnomAD allele-frequency bin)."""
     obj = _resolve_object(obj)
     uid = _resolve_uid(uid, obj)
     ann = fetch_annotations(uid)
@@ -2800,23 +2802,74 @@ def _loaded_structures():
     return [o for o in (cmd.get_object_list() or []) if not o.startswith("ufv_")]
 
 
+def _uni_ca(obj):
+    """{UniProt position: (x, y, z)} of obj's modelled Cα atoms (first chain in model order wins)."""
+    out = {}
+    for g in _ca_geometry(obj, refresh=True):
+        if g["uniPos"] is not None and g["uniPos"] not in out:
+            out[g["uniPos"]] = (g["x"], g["y"], g["z"])
+    return out
+
+
 @_undo_paused
 def ufv_align(reference=None):
     """ufv_align [reference] — superpose all loaded protein structures onto a reference (default the
-    first loaded), so several structures of the protein overlay. Uses cmd.align."""
+    first loaded), so several structures of the protein overlay. Like the extension's Overlay, each is
+    fitted on the Cα atoms of the residues both share, matched by UniProt position (no sequence
+    alignment); objects of another protein or with < 10 shared residues fall back to cmd.align."""
     objs = _loaded_structures()
     if len(objs) < 2:
         print("[UFV] need at least 2 loaded structures to align.")
         return
     ref = reference or objs[0]
+    ref_uid = (_resolve_uid(None, ref) or "").upper() if ref in UFV_MAPS else ""
+    ref_ca = _uni_ca(ref) if ref_uid else {}
     for o in objs:
         if o == ref:
             continue
         try:
-            r = cmd.align(o, ref)
-            print("[UFV] aligned %s onto %s: RMSD %.2f Å over %d atoms." % (o, ref, r[0], r[1]))
+            same = ref_uid and o in UFV_MAPS and (_resolve_uid(None, o) or "").upper() == ref_uid
+            ca = _uni_ca(o) if same else {}
+            shared = sorted(set(ref_ca) & set(ca))
+            if len(shared) >= 10:
+                m, rmsd = fit_rigid([ref_ca[p] for p in shared], [ca[p] for p in shared])
+                cmd.transform_object(o, [x for row in m for x in row], homogenous=1)
+                _GEOM_CACHE.pop(o, None)
+                print("[UFV] aligned %s onto %s: Cα RMSD %.2f Å over %d shared UniProt residues." % (o, ref, rmsd, len(shared)))
+            else:
+                r = cmd.align(o, ref)
+                print("[UFV] aligned %s onto %s (sequence alignment): RMSD %.2f Å over %d atoms." % (o, ref, r[0], r[1]))
         except Exception as e:
             print("[UFV] align %s failed: %s" % (o, e))
+
+
+@_undo_paused
+def ufv_load_annotations(path, obj=None, uid=None):
+    """ufv_load_annotations file [, object [, uniprot_id]] — load your own residue annotations (CSV / TSV) as the
+    Custom annotation category and show them as spheres. Columns: position (123, R123W, p.Arg123Trp or
+    120-130), optional label, value, color, note; without a header row: position, label, value. Kept for
+    the session; added to ufv_csv as the custom_annotation column. Same format as the browser extension."""
+    obj = _resolve_object(obj)
+    uid = (_resolve_uid(uid, obj) or "").upper()
+    s = custom_load(uid, path)
+    print("[UFV] %s: %d custom residue%s from %s%s; groups: %s." % (
+        uid, s["residues"], "" if s["residues"] == 1 else "s", s["file"],
+        (" (%d row%s skipped: no valid position)" % (s["skipped"], "" if s["skipped"] == 1 else "s")) if s["skipped"] else "",
+        ", ".join("%s %d" % (g["label"], g["count"]) for g in s["groups"]) or "none"))
+    if obj:
+        _ann_set(obj, uid, "cus", ["cus:%d" % i for i in range(s["residues"])])
+        _ann_apply(obj, uid, ("cus",))
+
+
+@_undo_paused
+def ufv_unload_annotations(obj=None, uid=None):
+    """ufv_unload_annotations [object [, uniprot_id]] — remove the custom annotations."""
+    obj = _resolve_object(obj)
+    uid = (_resolve_uid(uid, obj) or "").upper()
+    if obj:
+        _ann_set(obj, uid, "cus", [])
+        _ann_apply(obj, uid, ("cus",))
+    print("[UFV] %s: custom annotations %s." % (uid, "removed" if custom_clear(uid) else "were not loaded"))
 
 
 @_undo_paused
@@ -3132,7 +3185,8 @@ if _HAS_PYMOL:
         ("ufv_partner_layers", ufv_partner_layers),
         ("ufv_structures", ufv_structures), ("ufv_use", ufv_use),
         ("ufv_report", ufv_report), ("ufv_focus", ufv_focus), ("ufv_resetview", ufv_resetview),
-        ("ufv_align", ufv_align),
+        ("ufv_align", ufv_align), ("ufv_load_annotations", ufv_load_annotations),
+        ("ufv_unload_annotations", ufv_unload_annotations),
         ("ufv_ligands", ufv_ligands), ("ufv_ligands_hide", ufv_ligands_hide),
         ("ufv_ligand_focus", ufv_ligand_focus), ("ufv_show_pocket", ufv_show_pocket),
         ("ufv_hide", ufv_hide), ("ufv_clear", ufv_clear), ("ufv_info", ufv_info),
@@ -5200,9 +5254,9 @@ def _build_panel_class(QtWidgets, QtCore, QtGui):
                 "Filter the list (all terms must match, case-insensitive):\n"
                 "  1378 · 100-200 · N1378H · R2K — position / range / mutation\n"
                 "  pathogenic · likely · benign · uncertain · deleterious — consequence\n"
-                "  uniprot · clinvar · large-scale · reviewed — provenance\n"
+                "  uniprot · clinvar · cancer · population · reviewed — provenance\n"
                 "  disease name or id, description text, PTM type, ligand code, category\n"
-                "  \"quoted phrase\" · a|b = either · facets cons: src: dis: cat: pos:\n"
+                "  \"quoted phrase\" · a|b = either · facets cons: src: af: sub: dis: cat: pos:\n"
                 "Filters ▾ writes these terms for you. The header box ticks every listed row.")
             self._search_timer = QtCore.QTimer(self); self._search_timer.setSingleShot(True)
             self._search_timer.setInterval(120)              # debounce: one filter pass per typing pause
@@ -5217,8 +5271,8 @@ def _build_panel_class(QtWidgets, QtCore, QtGui):
             self._completer.setWidget(self.ann_search)
             self._completer.activated[str].connect(self._take_suggestion)
             self.ann_filters_btn = QtWidgets.QToolButton(); self.ann_filters_btn.setText("Filters ▾")
-            self.ann_filters_btn.setToolTip("Consequence / source / reviewed / disease filters and the variant "
-                                            "colour profile — they only write search terms")
+            self.ann_filters_btn.setToolTip("Consequence / source / allele frequency / substitution / disease filters "
+                                            "and the variant colour profile — they only write search terms")
             self.ann_filters_btn.setPopupMode(QtWidgets.QToolButton.InstantPopup)
             self.ann_filters_btn.setStyleSheet("QToolButton::menu-indicator { image: none; width: 0px; }")
             self.ann_filters_menu = QtWidgets.QMenu(self.ann_filters_btn)
@@ -5229,6 +5283,11 @@ def _build_panel_class(QtWidgets, QtCore, QtGui):
             self.ann_reset_btn.setToolTip("Uncheck all categories — nothing shown in 3D")
             self.ann_reset_btn.clicked.connect(self.on_ann_reset)
             tr.addWidget(self.ann_reset_btn)
+            self.ann_custom_btn = QtWidgets.QToolButton(); self.ann_custom_btn.setText("+")
+            self.ann_custom_btn.setToolTip("Load custom annotations (CSV / TSV: position, label, value, color, note) "
+                                           "— shown as the Custom category")
+            self.ann_custom_btn.clicked.connect(self.on_ann_custom)
+            tr.addWidget(self.ann_custom_btn)
 
             self.ann_model = _AnnModel(self)
             self.ann_proxy = _AnnProxy(self); self.ann_proxy.setSourceModel(self.ann_model)
@@ -5573,6 +5632,21 @@ def _build_panel_class(QtWidgets, QtCore, QtGui):
             if vis:
                 self.ann_commit(vis, not all(self.ann_model.is_on(r) for r in vis))
 
+        def on_ann_custom(self):
+            o, uid = self._ann_ctx()
+            if not uid:
+                return
+            path, _f = QtWidgets.QFileDialog.getOpenFileName(self, "Custom annotations for %s" % uid, "",
+                                                            "Annotation tables (*.csv *.tsv *.txt);;All files (*)")
+            if not path:
+                return
+            with _no_undo():
+                ufv_load_annotations(path, o, uid)
+            i = self.ann_cat.findData("cus")
+            if i >= 0:
+                self.ann_cat.setCurrentIndex(i)
+            self.ann_reload(force=True)
+
         def on_ann_reset(self):
             o = self.obj()
             if not o:
@@ -5646,7 +5720,8 @@ def _build_panel_class(QtWidgets, QtCore, QtGui):
                 a.setChecked(fac["cons"] is None or tok in fac["cons"])
                 a.triggered.connect(toggler("cons", tok, ANN_CONS_TOKENS))
             menu.addSection("Source")
-            for tok, lbl in (("uniprot", "UniProt reviewed"), ("clinvar", "ClinVar"), ("large", "Large-scale studies")):
+            for tok, lbl in (("uniprot", "UniProt reviewed"), ("clinvar", "ClinVar / ClinGen"), ("cancer", "Cancer somatic (COSMIC/TCGA)"),
+                             ("population", "Population (gnomAD/ExAC/TOPMed)"), ("other", "Other large-scale studies")):
                 a = menu.addAction(lbl); a.setCheckable(True)
                 a.setChecked(fac["src"] is None or tok in fac["src"])
                 a.triggered.connect(toggler("src", tok, ANN_SRC_TOKENS))
@@ -5655,6 +5730,14 @@ def _build_panel_class(QtWidgets, QtCore, QtGui):
             def rev(_c=False, on=not fac["reviewed"]):
                 self.ann_search.setText(ann_query_set(self.ann_search.text(), "reviewed", on)); self._apply_search()
             a.triggered.connect(rev)
+            for key, title, toks, cats in (("af", "Allele frequency (gnomAD)", ANN_AF_TOKENS, AF_COLORS),
+                                           ("sub", "Substitution type", ANN_SUB_TOKENS, SUBST_COLORS)):
+                sm = menu.addMenu(title if fac[key] is None else "%s (%d of %d)" % (title, len(fac[key]), len(toks)))
+                for tok, (lbl, hexc) in zip(toks, cats.items()):
+                    pm = QtGui.QPixmap(10, 10); pm.fill(QtGui.QColor(hexc))
+                    a = sm.addAction(QtGui.QIcon(pm), lbl); a.setCheckable(True)
+                    a.setChecked(fac[key] is None or tok in fac[key])
+                    a.triggered.connect(toggler(key, tok, toks))
             ann = _CACHE.get(self.cur_uid() or "") or {}
             summ = _disease_summary(ann.get("variants") or [], ann.get("diseaseColors")) if ann else {}
             names = [n for n in summ if n != "Unclassified"]

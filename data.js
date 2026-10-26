@@ -69,10 +69,32 @@ const DataProcessor = {
     },
 
     // ---- Provenance categories ----
+    // Large-scale imports are split by the source named in the variant's xrefs (EBI variation API),
+    // so somatic cancer and population cohorts can be told apart. One bucket per variant, first match wins.
     PROVENANCE_CATEGORIES: {
-        'UniProt reviewed':    { color: '#42a5f5' },
-        'ClinVar':             { color: '#ab47bc' },
-        'Large scale studies': { color: '#26c6da' },
+        'UniProt reviewed':             { color: '#42a5f5' },
+        'ClinVar / ClinGen':            { color: '#ab47bc' },
+        'Cancer somatic (COSMIC/TCGA)': { color: '#e65100' },
+        'Population (gnomAD/ExAC/TOPMed)': { color: '#26c6da' },
+        'Other large-scale studies':    { color: '#78909c' },
+    },
+
+    // ---- gnomAD allele-frequency bins (max AF across gnomAD releases in the variation payload) ----
+    AF_CATEGORIES: {
+        'No gnomAD frequency':    { color: '#d55e00' },
+        'Ultra-rare (<0.01%)':    { color: '#e69f00' },
+        'Rare (0.01–1%)':         { color: '#56b4e9' },
+        'Common (≥1%)':           { color: '#0072b2' },
+    },
+
+    // ---- Substitution class: physico-chemical character of the wild-type → mutant change ----
+    SUBST_CATEGORIES: {
+        'Stop gained':             { color: '#a1887f' },
+        'Gly / Pro / Cys change':  { color: '#cc79a7' },
+        'Charge change':           { color: '#d55e00' },
+        'Hydrophobicity change':   { color: '#e69f00' },
+        'Conservative':            { color: '#0072b2' },
+        'Other (indel / complex)': { color: '#9e9e9e' },
     },
 
     /**
@@ -477,6 +499,8 @@ const DataProcessor = {
                 rsIds:            impact.rsIds,
                 alphaMissenseScore: impact.alphaMissenseScore,
                 gnomadAf:         impact.gnomadAf,
+                afBin:            this._classifyAf(impact.gnomadAf),
+                substClass:       this._classifySubstitution(f.wildType, f.alternativeSequence),
                 genomicLocation:  impact.genomicLocation,
                 xrefs:            f.xrefs || [],
             });
@@ -519,9 +543,30 @@ const DataProcessor = {
     _classifyProvenance(v) {
         const src = (v.sourceType || '').toLowerCase();
         if (src === 'uniprot' || src === 'mixed') return 'UniProt reviewed';
-        const xrefs = v.xrefs || [];
-        if (xrefs.some(x => (x.name || '').toLowerCase().includes('clinvar'))) return 'ClinVar';
-        return 'Large scale studies';
+        const names = (v.xrefs || []).map(x => (x.name || '').toLowerCase());
+        if (names.some(n => n.includes('clinvar') || n.includes('clingen'))) return 'ClinVar / ClinGen';
+        if (names.some(n => n.includes('cosmic') || n.includes('tcga'))) return 'Cancer somatic (COSMIC/TCGA)';
+        if (names.some(n => /gnomad|exac|topmed|1000genomes|^esp$/.test(n))) return 'Population (gnomAD/ExAC/TOPMed)';
+        return 'Other large-scale studies';
+    },
+
+    _classifyAf(af) {
+        if (!Number.isFinite(af) || af <= 0) return 'No gnomAD frequency';
+        if (af < 1e-4) return 'Ultra-rare (<0.01%)';
+        if (af < 1e-2) return 'Rare (0.01–1%)';
+        return 'Common (≥1%)';
+    },
+
+    // First matching rule wins, ordered by expected structural severity.
+    _classifySubstitution(wt, mt) {
+        if (mt === '*') return 'Stop gained';
+        if (!wt || !mt || wt.length !== 1 || mt.length !== 1 || wt === '?') return 'Other (indel / complex)';
+        if ('GPC'.includes(wt) || 'GPC'.includes(mt)) return 'Gly / Pro / Cys change';
+        const charge = aa => 'KR'.includes(aa) ? 1 : 'DE'.includes(aa) ? -1 : 0;
+        if (charge(wt) !== charge(mt)) return 'Charge change';
+        const hydrophobic = aa => 'AVILMFW'.includes(aa);
+        if (hydrophobic(wt) !== hydrophobic(mt)) return 'Hydrophobicity change';
+        return 'Conservative';
     },
 
     _variantDesc(v) {
@@ -651,10 +696,14 @@ const DataProcessor = {
 
     /** Summary counts for provenance categories (skip 0-count) */
     getProvenanceSummary(variants) {
+        return this.getCategorySummary(variants, 'provenance', this.PROVENANCE_CATEGORIES);
+    },
+
+    /** Summary counts for any categorical variant field (category order kept, 0-count skipped). */
+    getCategorySummary(variants, field, categories) {
         const s = {};
-        for (const cat of Object.keys(this.PROVENANCE_CATEGORIES))
-            s[cat] = { count: 0, color: this.PROVENANCE_CATEGORIES[cat].color };
-        variants.forEach(v => { if (s[v.provenance]) s[v.provenance].count++; });
+        for (const cat of Object.keys(categories)) s[cat] = { count: 0, color: categories[cat].color };
+        variants.forEach(v => { if (s[v[field]]) s[v[field]].count++; });
         Object.keys(s).forEach(k => { if (s[k].count === 0) delete s[k]; });
         return s;
     },
@@ -700,10 +749,12 @@ const DataProcessor = {
      *  variant whose value is a KNOWN category; a missing or uncategorised value is never filtered out
      *  (so disease variants with no consequence/provenance still appear). An empty disease set shows
      *  nothing (additive model). */
-    filterVariants(variants, activeConsequences, activeProvenances, activeDiseases) {
+    filterVariants(variants, activeConsequences, activeProvenances, activeDiseases, activeAfBins = null, activeSubstClasses = null) {
         return variants.filter(v => {
             if (this.CONSEQUENCE_CATEGORIES[v.consequence] && !activeConsequences.has(v.consequence)) return false;
             if (this.PROVENANCE_CATEGORIES[v.provenance] && !activeProvenances.has(v.provenance)) return false;
+            if (activeAfBins && this.AF_CATEGORIES[v.afBin] && !activeAfBins.has(v.afBin)) return false;
+            if (activeSubstClasses && this.SUBST_CATEGORIES[v.substClass] && !activeSubstClasses.has(v.substClass)) return false;
             if (activeDiseases) {
                 return (v.diseases || []).some(d => activeDiseases.has(d));
             }

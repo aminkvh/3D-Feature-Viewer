@@ -35,6 +35,8 @@ const UFVState = (() => {
         selectedStructureIndex: 0,
         activeConsequences: new Set(),
         activeProvenances: new Set(),
+        activeAfBins: new Set(),
+        activeSubstClasses: new Set(),
         activeDiseases: null,
         variantPtmCats: new Set(), // PTM categories co-displayed in the Disease & Variants view
         scrapedDiseases: [],
@@ -70,6 +72,8 @@ const UFVState = (() => {
         state.selectedStructureIndex = 0;
         state.activeConsequences = new Set();
         state.activeProvenances = new Set();
+        state.activeAfBins = new Set();
+        state.activeSubstClasses = new Set();
         state.activeDiseases = null;
         state.variantPtmCats = new Set();
         state.scrapedDiseases = [];

@@ -27,6 +27,8 @@ More commands (all take an optional object / accession; the panel has the same c
 | `ufv_select` | PyMOL selection of the residues shown in 3D |
 | `ufv_show_annotations obj, variants, search=pathogenic` | Tick annotation rows from a script (`all`, row ids, or `search=`; add `add` to keep existing ticks) |
 | `ufv_reset_annotations` | Untick every annotation in every category (the panel's ↺) |
+| `ufv_load_annotations my.csv` | Your own residue annotations (CSV / TSV: position, label, value, color, note — the extension's format) as the *Custom* category; the panel's **+**. `ufv_unload_annotations` removes them |
+| `ufv_align` | Superpose every loaded structure of the protein on the first one, fitted on Cα atoms matched by UniProt position (falls back to sequence alignment below 10 shared residues) |
 
 The residue report adds CADD to the per-substitution predictor table, one block per ProtVar
 pocket, PDBe-KB experimental binding, analysis flags (● hotspot / burden / hub / pocket, once
@@ -98,7 +100,7 @@ the current molecule, which is the last one loaded or the one chosen with `ufv_u
 |---|---|
 | Data, loading | `ufv_fetch` `ufv_structures` `ufv_load` `ufv_use` `ufv_align` `ufv_info` (VMD also `ufv_load_structure <key>`) |
 | Numbering | `ufv_map` `ufv_chain` `ufv_chainmap` `ufv_custom` `ufv_chimera` |
-| Marker layers | `ufv_ptms` `ufv_variants` `ufv_diseases` `ufv_sites` `ufv_mutagenesis` `ufv_ligands` `ufv_ligands_hide` `ufv_partners` `ufv_partner_layers` `ufv_pdbekb` `ufv_prox` `ufv_hide` `ufv_select` `ufv_clear` (VMD also `ufv_show`, `ufv_layers`) |
+| Marker layers | `ufv_load_annotations` `ufv_unload_annotations` `ufv_ptms` `ufv_variants` `ufv_diseases` `ufv_sites` `ufv_mutagenesis` `ufv_ligands` `ufv_ligands_hide` `ufv_partners` `ufv_partner_layers` `ufv_pdbekb` `ufv_prox` `ufv_hide` `ufv_select` `ufv_clear` (VMD also `ufv_show`, `ufv_layers`) |
 | Cartoon colourings | `ufv_domains` `ufv_topology` `ufv_alphamissense` `ufv_plddt` `ufv_bfactor` `ufv_burden` `ufv_hotspots` `ufv_contacthubs` `ufv_pockets` `ufv_pocket_q` `ufv_pockets_all` (VMD also `ufv_cartoon plain`) |
 | Residue, ligand | `ufv_report` `ufv_focus` `ufv_resetview` `ufv_nearby` `ufv_ligand_focus` `ufv_show_pocket` `ufv_motif_search` `ufv_binding` `ufv_tractability` `ufv_ligand_identity` (VMD also `ufv_residue`, `ufv_ligand_info`, `ufv_open_uniprot`) |
 | Export | `ufv_csv` `ufv_save_bfactor` |

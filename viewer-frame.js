@@ -77,10 +77,12 @@
     const s = currentStructureCell();
     return s && s.cell && s.cell.obj && s.cell.obj.data;
   }
+  // Only the PRIMARY structure carries annotations; overlays (superposed extra structures) keep their own
+  // uniform colouring and must never be overpainted / made transparent / have their bonds edited.
+  function primaryStructures() { const c = currentStructureCell(); return c ? [c] : []; }
   function allRepresentationRefs() {
     const refs = [];
-    const cur = viewer.plugin.managers.structure.hierarchy.current;
-    (cur && cur.structures || []).forEach(st => (st.components || []).forEach(c =>
+    primaryStructures().forEach(st => (st.components || []).forEach(c =>
       (c.representations || []).forEach(r => { if (r.cell && r.cell.transform) refs.push(r.cell.transform.ref); })));
     return refs;
   }
@@ -114,8 +116,7 @@
   // (dashed H-bond / salt-bridge lines keep their interaction-type colours).
   function carbohydrateRepRefs() {
     const set = new Set();
-    const cur = viewer.plugin.managers.structure.hierarchy.current;
-    (cur && cur.structures || []).forEach(st => (st.components || []).forEach(c =>
+    primaryStructures().forEach(st => (st.components || []).forEach(c =>
       (c.representations || []).forEach(r => {
         const t = r.cell && r.cell.transform && r.cell.transform.params && r.cell.transform.params.type;
         if (t && (t.name === 'carbohydrate' || t.name === 'interactions') && r.cell.transform) set.add(r.cell.transform.ref);
@@ -126,8 +127,7 @@
   // decided by what the rep IS, not by when it was created.
   function repTypeByRef() {
     const m = new Map();
-    const cur = viewer.plugin.managers.structure.hierarchy.current;
-    (cur && cur.structures || []).forEach(st => (st.components || []).forEach(c =>
+    primaryStructures().forEach(st => (st.components || []).forEach(c =>
       (c.representations || []).forEach(r => {
         const t = r.cell && r.cell.transform && r.cell.transform.params && r.cell.transform.params.type;
         if (r.cell && r.cell.transform) m.set(r.cell.transform.ref, t && t.name);
@@ -276,8 +276,7 @@
   // Refs of the static-ligand component's representations.
   function ligandComponentRepRefs() {
     const set = new Set();
-    const cur = viewer.plugin.managers.structure.hierarchy.current;
-    (cur && cur.structures || []).forEach(st => (st.components || []).forEach(c => {
+    primaryStructures().forEach(st => (st.components || []).forEach(c => {
       if (c.key !== 'structure-component-static-ligand') return;
       (c.representations || []).forEach(r => { if (r.cell && r.cell.transform) set.add(r.cell.transform.ref); });
     }));
@@ -748,8 +747,7 @@
   // from ligand ball-and-stick reps, keeping each ligand's own (intra-unit) bonds intact.
   async function dropLigandInterBonds() {
     const refs = [];
-    const cur = viewer.plugin.managers.structure.hierarchy.current;
-    (cur && cur.structures || []).forEach(st => (st.components || []).forEach(c =>
+    primaryStructures().forEach(st => (st.components || []).forEach(c =>
       (c.representations || []).forEach(r => {
         const t = r.cell && r.cell.transform && r.cell.transform.params && r.cell.transform.params.type;
         if (t && t.name === 'ball-and-stick' && r.cell.transform) refs.push(r.cell.transform.ref);
@@ -772,17 +770,19 @@
   const NEUTRAL_CARTOON = { base: '#d0d0d0', groups: [] };
   async function loadData(data, format, isBinary) {
     _lastCartoonPayload = NEUTRAL_CARTOON;
+    _overlays.clear();
     await viewer.plugin.clear();
     await viewer.loadStructureFromData(data, format || 'mmcif', !!isBinary);
     await afterLoad();
   }
   async function loadUrl(url, format, isBinary) {
     _lastCartoonPayload = NEUTRAL_CARTOON;
+    _overlays.clear();
     await viewer.plugin.clear();
     await viewer.loadStructureFromUrl(url, format || 'mmcif', !!isBinary);
     await afterLoad();
   }
-  async function clearModel() { overpaintRefs = []; markerByColor = new Map(); labelMap = {}; await viewer.plugin.clear(); }
+  async function clearModel() { overpaintRefs = []; markerByColor = new Map(); labelMap = {}; _overlays.clear(); await viewer.plugin.clear(); }
   function resetCamera(durationMs) { try { viewer.plugin.canvas3d?.requestCameraReset({ durationMs: durationMs ?? 0 }); } catch (_) {} }
   function handleResize() { try { viewer.handleResize(); } catch (_) {} }
   async function screenshot() {
@@ -793,6 +793,124 @@
   function setBackground(color) {
     document.body.style.background = color;
     try { viewer.plugin.canvas3d?.setProps({ renderer: { backgroundColor: colorToInt(color) } }); } catch (_) {}
+  }
+
+  // ---- overlays: extra structures superposed onto the primary (display-only) ------------------
+  // Each overlay is its own data-tree branch (raw → trajectory → model → structure → conformation
+  // transform → polymer cartoon). It carries no annotations and is never overpainted (see
+  // primaryStructures). Superposition: least-squares fit of Cα pairs the parent matched by UniProt
+  // position, so no sequence alignment is needed. plugin.clear() on a primary load drops them all.
+  const _overlays = new Map(); // id -> { ref, label, model }
+  function caCoordMap(structure) {
+    const SP = L().structure.StructureProperties, SE = L().structure.StructureElement;
+    const loc = SE.Location.create(structure), m = new Map();
+    for (const unit of structure.units) {
+      loc.unit = unit;
+      for (let i = 0, n = unit.elements.length; i < n; i++) {
+        loc.element = unit.elements[i];
+        if (SP.atom.label_atom_id(loc) !== 'CA' || SP.residue.group_PDB(loc) === 'HETATM') continue;
+        const xyz = [SP.atom.x(loc), SP.atom.y(loc), SP.atom.z(loc)], ri = SP.residue.auth_seq_id(loc);
+        const k = SP.chain.auth_asym_id(loc) + '|' + ri;
+        if (!m.has(k)) m.set(k, xyz);
+        if (!m.has('|' + ri)) m.set('|' + ri, xyz); // chain-agnostic fallback (AlphaFold: chain null)
+      }
+    }
+    return m;
+  }
+  // Rigid fit moving B onto A (Horn 1987 quaternion method; largest eigenvector by Jacobi).
+  // Returns a column-major 4x4 matrix and the post-fit Cα RMSD.
+  function fitRigid(A, B) {
+    const n = A.length, ca = [0, 0, 0], cb = [0, 0, 0];
+    for (let i = 0; i < n; i++) for (let d = 0; d < 3; d++) { ca[d] += A[i][d] / n; cb[d] += B[i][d] / n; }
+    const S = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
+    for (let i = 0; i < n; i++) for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) S[r][c] += (B[i][r] - cb[r]) * (A[i][c] - ca[c]);
+    const [[xx, xy, xz], [yx, yy, yz], [zx, zy, zz]] = S;
+    const N = [
+      [xx + yy + zz, yz - zy, zx - xz, xy - yx],
+      [yz - zy, xx - yy - zz, xy + yx, zx + xz],
+      [zx - xz, xy + yx, -xx + yy - zz, yz + zy],
+      [xy - yx, zx + xz, yz + zy, -xx - yy + zz],
+    ];
+    const V = [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]];
+    for (let sweep = 0; sweep < 50; sweep++) {
+      let off = 0;
+      for (let p = 0; p < 4; p++) for (let q = p + 1; q < 4; q++) off += N[p][q] * N[p][q];
+      if (off < 1e-18) break;
+      for (let p = 0; p < 4; p++) for (let q = p + 1; q < 4; q++) {
+        if (Math.abs(N[p][q]) < 1e-30) continue;
+        const th = (N[q][q] - N[p][p]) / (2 * N[p][q]);
+        const t = Math.sign(th || 1) / (Math.abs(th) + Math.sqrt(th * th + 1)), c = 1 / Math.sqrt(t * t + 1), s = t * c;
+        for (let k = 0; k < 4; k++) { const a = N[k][p], b = N[k][q]; N[k][p] = c * a - s * b; N[k][q] = s * a + c * b; }
+        for (let k = 0; k < 4; k++) { const a = N[p][k], b = N[q][k]; N[p][k] = c * a - s * b; N[q][k] = s * a + c * b; }
+        for (let k = 0; k < 4; k++) { const a = V[k][p], b = V[k][q]; V[k][p] = c * a - s * b; V[k][q] = s * a + c * b; }
+      }
+    }
+    let best = 0; for (let k = 1; k < 4; k++) if (N[k][k] > N[best][best]) best = k;
+    const [w, x, y, z] = [V[0][best], V[1][best], V[2][best], V[3][best]];
+    const R = [
+      [w * w + x * x - y * y - z * z, 2 * (x * y - w * z), 2 * (x * z + w * y)],
+      [2 * (x * y + w * z), w * w - x * x + y * y - z * z, 2 * (y * z - w * x)],
+      [2 * (x * z - w * y), 2 * (y * z + w * x), w * w - x * x - y * y + z * z],
+    ];
+    const t = [0, 1, 2].map(r => ca[r] - (R[r][0] * cb[0] + R[r][1] * cb[1] + R[r][2] * cb[2]));
+    let ss = 0;
+    for (let i = 0; i < n; i++) for (let r = 0; r < 3; r++) {
+      const v = R[r][0] * B[i][0] + R[r][1] * B[i][1] + R[r][2] * B[i][2] + t[r] - A[i][r]; ss += v * v;
+    }
+    const mat = [R[0][0], R[1][0], R[2][0], 0, R[0][1], R[1][1], R[2][1], 0, R[0][2], R[1][2], R[2][2], 0, t[0], t[1], t[2], 1];
+    return { mat, rmsd: Math.sqrt(ss / n) };
+  }
+  async function addOverlay(m) {
+    const plugin = viewer.plugin, prim = currentStructureData();
+    if (!prim) return { ok: false, error: 'no primary structure' };
+    await removeOverlay(m);
+    const data = m.data instanceof ArrayBuffer ? new Uint8Array(m.data) : m.data;
+    const raw = await plugin.builders.data.rawData({ data, label: m.label || m.id });
+    try {
+      const traj = await plugin.builders.structure.parseTrajectory(raw, m.format === 'pdb' ? 'pdb' : 'mmcif');
+      const model = await plugin.builders.structure.createModel(traj);
+      const st = await plugin.builders.structure.createStructure(model);
+      const ma = caCoordMap(prim), mb = caCoordMap(st.obj.data), A = [], B = [];
+      for (const p of (m.pairs || [])) {
+        const a = ma.get((p.a[0] == null ? '' : p.a[0]) + '|' + p.a[1]), b = mb.get((p.b[0] == null ? '' : p.b[0]) + '|' + p.b[1]);
+        if (a && b) { A.push(a); B.push(b); }
+      }
+      if (A.length < 10) throw new Error(`only ${A.length} shared residues`);
+      const fit = fitRigid(A, B);
+      const b = plugin.build();
+      const tNode = b.to(st.ref).insert(L().plugin.StateTransforms.Model.TransformStructureConformation,
+        { transform: { name: 'matrix', params: { data: fit.mat, transpose: false } } });
+      await b.commit();
+      // Draw only this protein's chains (a complex's partner subunits would swamp the main structure).
+      const SP = L().structure.StructureProperties, Q = L().structure.Queries;
+      const tStruct = plugin.state.data.cells.get(tNode.ref).obj.data;
+      const chains = m.chains && m.chains.length ? new Set(m.chains) : null;
+      const bundle = L().structure.StructureElement.Bundle.fromSelection(Q.generators.atoms({
+        residueTest: ctx => SP.residue.group_PDB(ctx.element) !== 'HETATM' && (!chains || chains.has(SP.chain.auth_asym_id(ctx.element))),
+      })(new (L().structure.QueryContext)(tStruct)));
+      const b2 = plugin.build();
+      const sel = b2.to(tNode.ref).apply(L().plugin.StateTransforms.Model.StructureSelectionFromBundle, { bundle, label: 'ufv-overlay' });
+      await b2.commit();
+      await plugin.builders.structure.representation.addRepresentation(sel.ref,
+        { type: 'cartoon', typeParams: { alpha: 0.6 }, color: 'uniform', colorParams: { value: colorToInt(m.color) } });
+      _overlays.set(m.id, { ref: raw.ref, label: m.label || m.id, model: st.obj.data.models[0] });
+      return { ok: true, rmsd: fit.rmsd, n: A.length };
+    } catch (e) {
+      try { await plugin.build().delete(raw.ref).commit(); } catch (_) {}
+      return { ok: false, error: String(e && e.message || e) };
+    }
+  }
+  async function removeOverlay(m) {
+    const o = _overlays.get(m.id); if (!o) return true;
+    _overlays.delete(m.id);
+    try { await viewer.plugin.build().delete(o.ref).commit(); } catch (_) {}
+    return true;
+  }
+  // Overlay that owns a location (null ⇒ the primary structure, or nothing).
+  function overlayOf(loc) {
+    if (!loc || !loc.unit) return null;
+    for (const o of _overlays.values()) if (o.model === loc.unit.model) return o;
+    return null;
   }
 
   // ---- command dispatch ----------------------------------------------------------------------
@@ -817,6 +935,16 @@
     clearPocket() { return doClearPocket(); },
     frameResidues(m) { try { if (m.residues && m.residues.length) viewer.plugin.managers.camera.focusLoci(lociForResidueList(m.residues), { extraRadius: 4 }); } catch (_) {} return true; },
     unfocus() { return doUnfocus(); },
+    async addOverlay(m) { return await addOverlay(m); },
+    async removeOverlay(m) { return await removeOverlay(m); },
+    // Transient hover highlight driven from the sequence strip (resi == null clears it).
+    highlight(m) {
+      try {
+        const H = viewer.plugin.managers.interactivity.lociHighlights;
+        if (m.resi == null) H.clearHighlights(); else H.highlightOnly({ loci: lociForResidue(m.chain, m.resi) });
+      } catch (_) {}
+      return true;
+    },
     background(m) { _bgColor = parseInt((m.color || '#0c111b').replace('#', ''), 16); applyBg(); return true; },
   };
 
@@ -965,15 +1093,26 @@
       const SE = L().structure.StructureElement;
       viewer.plugin.behaviors.interaction.click.subscribe((e) => {
         const loci = e && e.current && e.current.loci;
+        if (overlayOf(firstLocation(loci))) return; // overlays are display-only
         const atom = lociToAtom(loci);
         if (atom) post({ evt: 'pick', kind: 'click', atom });
         else if (loci && loci.kind === 'empty-loci') post({ evt: 'pick', kind: 'background' });
       });
+      let lastHoverKey = null; // post residue hovers only on change (drives the sequence-strip outline)
+      const postHoverRes = (chain, resi) => {
+        const k = resi == null ? null : chain + '|' + resi;
+        if (k === lastHoverKey) return;
+        lastHoverKey = k;
+        post({ evt: 'hoverRes', chain, resi });
+      };
       viewer.plugin.behaviors.interaction.hover.subscribe((e) => {
         const loc = firstLocation(e && e.current && e.current.loci); // handles stick (bond) hover too
-        if (!loc) { tipHide(); return; }
+        if (!loc) { tipHide(); postHoverRes(null, null); return; }
         const ri = SP.residue.auth_seq_id(loc);
         const resn = SP.atom.auth_comp_id(loc);
+        const ov = overlayOf(loc);
+        if (ov) { tipShow(resn, ri, `Overlay: ${ov.label}`); postHoverRes(null, null); return; }
+        postHoverRes(SP.chain.auth_asym_id(loc), SP.residue.group_PDB(loc) === 'HETATM' ? null : ri);
         // Ligands have no per-residue annotation — show just the component name (no "Ligand" label).
         if (SP.residue.group_PDB(loc) === 'HETATM') { tipShow(resn, ri, ''); return; }
         const body = labelMap[SP.chain.auth_asym_id(loc) + '|' + ri] || labelMap['|' + ri] || null;

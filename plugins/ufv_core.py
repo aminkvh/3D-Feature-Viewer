@@ -175,9 +175,12 @@ CONSEQUENCE_COLORS = {   # data.js CONSEQUENCE_CATEGORIES (vermillion / amber / 
 }
 PROVENANCE_COLORS = {   # data.js PROVENANCE_CATEGORIES
     "UniProt reviewed": "#42a5f5",
-    "ClinVar": "#ab47bc",
-    "Large scale studies": "#26c6da",
+    "ClinVar / ClinGen": "#ab47bc",
+    "Cancer somatic (COSMIC/TCGA)": "#e65100",
+    "Population (gnomAD/ExAC/TOPMed)": "#26c6da",
+    "Other large-scale studies": "#78909c",
 }
+LARGE_SCALE_PROVENANCES = ("Cancer somatic (COSMIC/TCGA)", "Population (gnomAD/ExAC/TOPMed)", "Other large-scale studies")
 # 50-colour disease palette (data.js DISEASE_PALETTE): diseases are coloured in order of first
 # appearance across the variant list; consecutive entries come from different hue families.
 DISEASE_PALETTE = [
@@ -188,6 +191,50 @@ DISEASE_PALETTE = [
     "#311b92", "#f06292", "#9ccc65", "#7c4dff", "#01579b", "#0277bd", "#ff8f00", "#00695c", "#4e342e", "#fdd835",
 ]
 UNCLASSIFIED_COLOR = "#9e9e9e"
+AF_COLORS = {            # data.js AF_CATEGORIES: gnomAD allele-frequency bins (max AF across gnomAD releases)
+    "No gnomAD frequency": "#d55e00",
+    "Ultra-rare (<0.01%)": "#e69f00",
+    "Rare (0.01–1%)": "#56b4e9",
+    "Common (≥1%)": "#0072b2",
+}
+SUBST_COLORS = {         # data.js SUBST_CATEGORIES: physico-chemical character of the substitution
+    "Stop gained": "#a1887f",
+    "Gly / Pro / Cys change": "#cc79a7",
+    "Charge change": "#d55e00",
+    "Hydrophobicity change": "#e69f00",
+    "Conservative": "#0072b2",
+    "Other (indel / complex)": "#9e9e9e",
+}
+CUSTOM_PALETTE = ["#0072b2", "#e69f00", "#009e73", "#cc79a7", "#56b4e9", "#d55e00", "#f0e442", "#999999"]
+
+
+def _classify_af(af):
+    """data.js _classifyAf."""
+    if not isinstance(af, (int, float)) or af != af or af <= 0:
+        return "No gnomAD frequency"
+    if af < 1e-4:
+        return "Ultra-rare (<0.01%)"
+    if af < 1e-2:
+        return "Rare (0.01–1%)"
+    return "Common (≥1%)"
+
+
+def _classify_substitution(wt, mt):
+    """data.js _classifySubstitution: first matching rule wins, ordered by expected structural severity."""
+    if mt == "*":
+        return "Stop gained"
+    if not wt or not mt or len(wt) != 1 or len(mt) != 1 or wt == "?":
+        return "Other (indel / complex)"
+    if wt in "GPC" or mt in "GPC":
+        return "Gly / Pro / Cys change"
+
+    def charge(a):
+        return 1 if a in "KR" else -1 if a in "DE" else 0
+    if charge(wt) != charge(mt):
+        return "Charge change"
+    if (wt in "AVILMFW") != (mt in "AVILMFW"):
+        return "Hydrophobicity change"
+    return "Conservative"
 TOPOLOGY_COLORS = {
     "transmembrane": "#f9a825", "intramembrane": "#ef6c00", "cytoplasmic": "#1e88e5",
     "extracellular": "#e53935", "lumenal": "#43a047", "periplasmic": "#26a69a",
@@ -622,10 +669,14 @@ def _classify_provenance(v):
     src = (v.get("sourceType") or "").lower()
     if src in ("uniprot", "mixed"):
         return "UniProt reviewed"
-    for x in (v.get("xrefs") or []):
-        if "clinvar" in (x.get("name") or "").lower():
-            return "ClinVar"
-    return "Large scale studies"
+    names = [(x.get("name") or "").lower() for x in (v.get("xrefs") or [])]
+    if any("clinvar" in n or "clingen" in n for n in names):
+        return "ClinVar / ClinGen"
+    if any("cosmic" in n or "tcga" in n for n in names):
+        return "Cancer somatic (COSMIC/TCGA)"
+    if any(re.search(r"gnomad|exac|topmed|1000genomes|^esp$", n) for n in names):
+        return "Population (gnomAD/ExAC/TOPMed)"
+    return "Other large-scale studies"
 
 
 _DISEASE_ABBR_EXCLUDE = ("ECO", "MIM", "NCI", "VAR", "PRO")
@@ -754,6 +805,8 @@ def _extract_variants(variation, am_map):
             "rsIds": rs,
             "alphaMissense": am,
             "gnomad": _gnomad_af(f),
+            "afBin": _classify_af(_gnomad_af(f)),
+            "substClass": _classify_substitution(f.get("wildType"), f.get("alternativeSequence")),
             "genomic": _genomic_hgvs(f),
         })
     return out
@@ -3335,8 +3388,12 @@ _LAYER_BUILT = {}     # obj -> {tag: {"pos": frozenset(built positions), "groups
 
 _SEVERITY = ["Likely pathogenic or pathogenic", "Predicted deleterious", "Uncertain significance",
              "Likely benign or benign"]
-_PROV_TOKENS = {"reviewed": "UniProt reviewed", "uniprot": "UniProt reviewed", "clinvar": "ClinVar",
-                "large": "Large scale studies", "largescale": "Large scale studies", "large_scale": "Large scale studies"}
+_PROV_TOKENS = {"reviewed": "UniProt reviewed", "uniprot": "UniProt reviewed", "clinvar": "ClinVar / ClinGen",
+                "clingen": "ClinVar / ClinGen", "cancer": "Cancer somatic (COSMIC/TCGA)", "cosmic": "Cancer somatic (COSMIC/TCGA)",
+                "tcga": "Cancer somatic (COSMIC/TCGA)", "somatic": "Cancer somatic (COSMIC/TCGA)",
+                "population": "Population (gnomAD/ExAC/TOPMed)", "gnomad": "Population (gnomAD/ExAC/TOPMed)",
+                "other": "Other large-scale studies"}
+_LARGE_TOKENS = ("large", "largescale", "large_scale", "large-scale")   # back-compat: all large-scale buckets
 
 
 def _parse_provenances(spec):
@@ -3348,7 +3405,9 @@ def _parse_provenances(spec):
     out = set()
     for tok in re.split(r"[;,|]+|\s+", str(spec).strip()):
         t = tok.strip().lower()
-        if t in _PROV_TOKENS:
+        if t in _LARGE_TOKENS:
+            out.update(LARGE_SCALE_PROVENANCES)
+        elif t in _PROV_TOKENS:
             out.add(_PROV_TOKENS[t])
         elif t:
             for cat in PROVENANCE_COLORS:
@@ -3386,13 +3445,18 @@ def _variant_colorer(ann, color="consequence", diseases=None):
         return f
     if color.startswith("prov"):
         return lambda v: PROVENANCE_COLORS.get(v.get("provenance"), UNCLASSIFIED_COLOR)
+    if color.startswith("fre") or color.startswith("af"):
+        return lambda v: AF_COLORS.get(v.get("afBin"), UNCLASSIFIED_COLOR)
+    if color.startswith("sub"):
+        return lambda v: SUBST_COLORS.get(v.get("substClass"), UNCLASSIFIED_COLOR)
     return lambda v: v.get("consequenceColor") or UNCLASSIFIED_COLOR
 
 
 def _variant_groups(ann, tokens, reviewed_only=False, provenances=None, diseases=None, color="consequence"):
     """{colour: [positions]} for the variant sphere layer: filtered like the extension's variant window,
     ONE sphere per position coloured by its most severe variant (pathogenic > predicted deleterious >
-    uncertain > benign) under the active colour profile (consequence | disease | provenance)."""
+    uncertain > benign) under the active colour profile (consequence | disease | provenance | frequency |
+    substitution)."""
     shown = _filter_variants(ann["variants"], tokens, provenances, diseases, reviewed_only)
     col = _variant_colorer(ann, color, diseases)
     pos_col, pos_sev = {}, {}
@@ -4347,6 +4411,146 @@ def _js_exp3(x):
         return "%se%s%d" % (mant, "+" if int(ex) >= 0 else "-", abs(int(ex)))
 
 
+# ---- custom annotations (modal.js parseCustomAnnotations): a user CSV / TSV of residue-level annotations ----------
+# Kept per accession for the session; shown as the 'cus' annotation category and as the CSV's last column.
+# Columns (header names matched loosely; without a header: position, label, value):
+#   position (123, R123W, p.Arg123Trp or a range 120-130), label, value, color, note.
+CUSTOM_ANN = {}          # uid -> {"file": name, "items": [{position, label, value, note, color}], "skipped": n}
+CUSTOM_MAX_RANGE = 2000
+_RE_CUS_HEAD = {"pos": r"^(position|pos|residue|resi|resid|resnum|site|variant|mutation|aa_?change)$",
+                "label": r"^(label|category|group|type|class|name|annotation)$",
+                "value": r"^(value|score|val)$", "color": r"^colou?r$", "note": r"^(note|description|comment|desc)$"}
+
+
+def parse_custom_annotations(text, seqlen):
+    """(items, skipped): one item per residue; a label's colour is its first valid `color` cell, else the next
+    CUSTOM_PALETTE colour in order of first appearance (as the extension)."""
+    rows = [ln.strip() for ln in str(text or "").splitlines()]
+    rows = [ln for ln in rows if ln and not ln.startswith("#")]
+    if not rows:
+        return [], 0
+    delim = "\t" if "\t" in rows[0] else ";" if (";" in rows[0] and "," not in rows[0]) else ","
+
+    def split(ln):
+        return [re.sub(r'^"(.*)"$', r"\1", c.strip()) for c in ln.split(delim)]
+    head = [h.lower() for h in split(rows[0])]
+    col = {k: next((i for i, h in enumerate(head) if re.match(rx, h)), -1) for k, rx in _RE_CUS_HEAD.items()}
+    has_header = col["pos"] >= 0
+    if not has_header:
+        col = {"pos": 0, "label": 1, "value": 2, "color": -1, "note": -1}
+    cell = lambda c, k: c[col[k]] if 0 <= col[k] < len(c) else ""
+    items, colors, skipped = [], {}, 0
+    for ln in rows[1 if has_header else 0:]:
+        c = split(ln)
+        raw = cell(c, "pos")
+        rng, num = re.match(r"^(\d+)\s*[-–]\s*(\d+)$", raw), re.search(r"(\d+)", raw)
+        a, b = (int(rng.group(1)), int(rng.group(2))) if rng else (int(num.group(1)),) * 2 if num else (0, -1)
+        if not (a >= 1 and b >= a and b <= seqlen and b - a < CUSTOM_MAX_RANGE):
+            skipped += 1
+            continue
+        label = cell(c, "label") or "Custom"
+        vs = cell(c, "value")
+        try:
+            value = float(vs) if vs != "" else None
+            value = int(value) if value is not None and value.is_integer() and "." not in vs else value
+        except ValueError:
+            value = vs
+        hexc = cell(c, "color")
+        if re.match(r"^#?[0-9a-fA-F]{6}$", hexc) and label not in colors:
+            colors[label] = hexc if hexc.startswith("#") else "#" + hexc
+        for p in range(a, b + 1):
+            items.append({"position": p, "label": label, "value": value, "note": cell(c, "note")})
+    order = []
+    for it in items:
+        if it["label"] not in order:
+            order.append(it["label"])
+    pal = {lab: colors.get(lab) or CUSTOM_PALETTE[i % len(CUSTOM_PALETTE)] for i, lab in enumerate(order)}
+    for it in items:
+        it["color"] = pal[it["label"]]
+    return items, skipped
+
+
+def _custom_text(it, csv=False):
+    """'label = value (note)' (the CSV form drops the spaces around '=', as the extension's export)."""
+    val = "" if it.get("value") is None else ("=%s" if csv else " = %s") % it["value"]
+    return it["label"] + val + (" (%s)" % it["note"] if it.get("note") else "")
+
+
+def _csv_quote(v):
+    return '"%s"' % v.replace('"', '""') if re.search(r'[",\n]', v) else v
+
+
+def fit_rigid(A, B):
+    """Least-squares rigid fit moving points B onto A (viewer-frame.js fitRigid: Horn 1987 quaternion method,
+    largest eigenvector by Jacobi). Returns (4x4 row-major matrix as nested lists, RMSD after the fit)."""
+    n = len(A)
+    ca = [sum(p[d] for p in A) / n for d in range(3)]
+    cb = [sum(p[d] for p in B) / n for d in range(3)]
+    S = [[0.0] * 3 for _ in range(3)]
+    for a, b in zip(A, B):
+        for r in range(3):
+            for c in range(3):
+                S[r][c] += (b[r] - cb[r]) * (a[c] - ca[c])
+    (xx, xy, xz), (yx, yy, yz), (zx, zy, zz) = S
+    N = [[xx + yy + zz, yz - zy, zx - xz, xy - yx],
+         [yz - zy, xx - yy - zz, xy + yx, zx + xz],
+         [zx - xz, xy + yx, -xx + yy - zz, yz + zy],
+         [xy - yx, zx + xz, yz + zy, -xx - yy + zz]]
+    V = [[1.0 if i == j else 0.0 for j in range(4)] for i in range(4)]
+    for _sweep in range(50):
+        if sum(N[p][q] ** 2 for p in range(4) for q in range(p + 1, 4)) < 1e-18:
+            break
+        for p in range(4):
+            for q in range(p + 1, 4):
+                if abs(N[p][q]) < 1e-30:
+                    continue
+                th = (N[q][q] - N[p][p]) / (2 * N[p][q])
+                t = (1.0 if th >= 0 else -1.0) / (abs(th) + _math.sqrt(th * th + 1))
+                c = 1 / _math.sqrt(t * t + 1)
+                s = t * c
+                for k in range(4):
+                    a_, b_ = N[k][p], N[k][q]; N[k][p], N[k][q] = c * a_ - s * b_, s * a_ + c * b_
+                for k in range(4):
+                    a_, b_ = N[p][k], N[q][k]; N[p][k], N[q][k] = c * a_ - s * b_, s * a_ + c * b_
+                for k in range(4):
+                    a_, b_ = V[k][p], V[k][q]; V[k][p], V[k][q] = c * a_ - s * b_, s * a_ + c * b_
+    best = max(range(4), key=lambda k: N[k][k])
+    w, x, y, z = (V[k][best] for k in range(4))
+    R = [[w * w + x * x - y * y - z * z, 2 * (x * y - w * z), 2 * (x * z + w * y)],
+         [2 * (x * y + w * z), w * w - x * x + y * y - z * z, 2 * (y * z - w * x)],
+         [2 * (x * z - w * y), 2 * (y * z + w * x), w * w - x * x - y * y + z * z]]
+    tr = [ca[r] - sum(R[r][k] * cb[k] for k in range(3)) for r in range(3)]
+    ss = sum((sum(R[r][k] * b[k] for k in range(3)) + tr[r] - a[r]) ** 2 for a, b in zip(A, B) for r in range(3))
+    return [R[0] + [tr[0]], R[1] + [tr[1]], R[2] + [tr[2]], [0.0, 0.0, 0.0, 1.0]], _math.sqrt(ss / n)
+
+
+def custom_load(uid, path):
+    """Load a custom-annotation file for `uid` (replaces the previous one). Returns a summary dict."""
+    uid = uid.strip().upper()
+    ann = fetch_annotations(uid)
+    with open(path, "r", encoding="utf-8-sig", errors="replace") as fh:
+        items, skipped = parse_custom_annotations(fh.read(), len(ann.get("sequence") or ""))
+    CUSTOM_ANN[uid] = {"file": os.path.basename(path), "items": items, "skipped": skipped}
+    return custom_summary(uid)
+
+
+def custom_clear(uid):
+    return CUSTOM_ANN.pop(uid.strip().upper(), None) is not None
+
+
+def custom_summary(uid):
+    """{file, residues, skipped, groups: [{label, color, count}], items} or {} when nothing is loaded."""
+    cu = CUSTOM_ANN.get(uid.strip().upper())
+    if not cu:
+        return {}
+    groups = {}
+    for it in cu["items"]:
+        g = groups.setdefault(it["label"], {"label": it["label"], "color": it["color"], "count": 0})
+        g["count"] += 1
+    return {"file": cu["file"], "residues": len(cu["items"]), "skipped": cu["skipped"],
+            "groups": list(groups.values()), "items": cu["items"]}
+
+
 def _residue_csv_text(ann, obj=None, protvar_by_pos=None, chains=(), hot=None, hub=None, pocket=None,
                       prox=None, hot_ch=None, hub_ch=None, lig_contacts=None):
     """The per-residue CSV text (see _residue_csv) from structure results already computed: `chains`
@@ -4489,6 +4693,13 @@ def _residue_csv_text(ann, obj=None, protvar_by_pos=None, chains=(), hot=None, h
             parts.append("%d,%d" % (hot_num.get(hot.get(pos), 0), hub_num.get(hub.get(pos), 0)))
             parts.extend(tail)
         rows.append(",".join(parts))
+    cu = CUSTOM_ANN.get((ann.get("uid") or "").upper())
+    if cu:                              # the user's custom annotations as a final column (data.js parity)
+        by_pos = {}
+        for it in cu["items"]:
+            by_pos.setdefault(it["position"], []).append(_custom_text(it, csv=True))
+        rows = [rows[0] + ",custom_annotation"] + [
+            r + "," + _csv_quote("; ".join(by_pos.get(int(r.split(",", 1)[0]), ()))) for r in rows[1:]]
     return "\n".join(rows)
 
 
@@ -6031,6 +6242,7 @@ def _vmd_annotations_build(uid, ann):
             "reviewed": bool(v.get("reviewed")), "diseases": list(dis),
             "dcolor": v.get("diseaseColor") or UNCLASSIFIED_COLOR, "am": v.get("alphaMissense"),
             "gnomad": v.get("gnomad"), "clinvar": v.get("clinVar") or "",
+            "af": _ANN_AF_OF.get(v.get("afBin"), ""), "sub": _ANN_SUB_OF.get(v.get("substClass"), ""),
             "label": "%s%d%s  %s%s" % (wt, v["position"], mt, v.get("consequence") or "",
                                        (" — " + "; ".join(dis)) if dis else "")})
     return {
@@ -7509,24 +7721,44 @@ def _op_sleep(a):
 #   dis:"Label"|ID      cat:ptm|var|...|<PTM category>      pos:100-200
 # '|' separates alternatives inside one term (OR). A facet value 'none' matches nothing (the old filters'
 # empty sets). Serve ops: ann_rows, search, filter_query.
-ANN_CATS = ("ptm", "var", "site", "mutag", "dom", "lig", "prt", "kb")
+ANN_CATS = ("ptm", "var", "site", "mutag", "dom", "lig", "prt", "kb", "cus")
 ANN_CAT_LABELS = {"ptm": "PTMs", "var": "Variants", "site": "Sites", "mutag": "Mutagenesis", "dom": "Domains",
-                  "lig": "Ligands", "prt": "Partners", "kb": "PDBe-KB"}
+                  "lig": "Ligands", "prt": "Partners", "kb": "PDBe-KB", "cus": "Custom"}
 ANN_CAT_SHORT = {"ptm": "PTM", "var": "Var", "site": "Site", "mutag": "Mut", "dom": "Dom", "lig": "Lig",
-                 "prt": "Prt", "kb": "KB"}
+                 "prt": "Prt", "kb": "KB", "cus": "Cus"}
 _ANN_CAT_ALIAS = {"ptm": "ptm", "ptms": "ptm", "var": "var", "variant": "var", "variants": "var", "site": "site",
                   "sites": "site", "mutag": "mutag", "mutagenesis": "mutag", "dom": "dom", "domain": "dom",
                   "domains": "dom", "lig": "lig", "ligand": "lig", "ligands": "lig", "prt": "prt", "partner": "prt",
-                  "partners": "prt", "kb": "kb", "pdbekb": "kb", "pdbe-kb": "kb", "binding": "kb"}
+                  "partners": "prt", "kb": "kb", "pdbekb": "kb", "pdbe-kb": "kb", "binding": "kb", "cus": "cus",
+                  "custom": "cus", "user": "cus"}
 ANN_CONS_TOKENS = ("pathogenic", "deleterious", "benign", "uncertain")
-ANN_SRC_TOKENS = ("uniprot", "clinvar", "large")
-_ANN_SRC_OF = {"UniProt reviewed": "uniprot", "ClinVar": "clinvar", "Large scale studies": "large"}
+ANN_SRC_TOKENS = ("uniprot", "clinvar", "cancer", "population", "other")
+_ANN_SRC_OF = {"UniProt reviewed": "uniprot", "ClinVar / ClinGen": "clinvar", "Cancer somatic (COSMIC/TCGA)": "cancer",
+               "Population (gnomAD/ExAC/TOPMed)": "population", "Other large-scale studies": "other"}
 _ANN_SRC_CAT = {v: k for k, v in _ANN_SRC_OF.items()}
-_ANN_SRC_ALIAS = {"uniprot": "uniprot", "reviewed": "uniprot", "clinvar": "clinvar", "large": "large",
-                  "large-scale": "large", "largescale": "large", "large_scale": "large"}
+_ANN_SRC_ALIAS = {"uniprot": ("uniprot",), "reviewed": ("uniprot",), "clinvar": ("clinvar",), "clingen": ("clinvar",),
+                  "cancer": ("cancer",), "cosmic": ("cancer",), "tcga": ("cancer",), "somatic": ("cancer",),
+                  "population": ("population",), "gnomad": ("population",), "other": ("other",),
+                  **{k: ("cancer", "population", "other") for k in ("large", "large-scale", "largescale", "large_scale")}}
+# allele-frequency (af:) and substitution (sub:) facet tokens <-> AF_COLORS / SUBST_COLORS categories
+ANN_AF_TOKENS = ("absent", "ultrarare", "rare", "common")
+_ANN_AF_OF = dict(zip(AF_COLORS, ANN_AF_TOKENS))
+ANN_SUB_TOKENS = ("stop", "gpc", "charge", "hydrophobicity", "conservative", "complex")
+_ANN_SUB_OF = dict(zip(SUBST_COLORS, ANN_SUB_TOKENS))
+_ANN_TOKEN_ALIAS = {"af": {"nognomad": "absent", "ultra-rare": "ultrarare", "ultra": "ultrarare"},
+                    "sub": {"nonsense": "stop", "gly": "gpc", "pro": "gpc", "cys": "gpc", "hydro": "hydrophobicity",
+                            "indel": "complex", "other": "complex"}}
 _ANN_FACETS = {"cons": "cons", "consequence": "cons", "src": "src", "source": "src", "prov": "src",
                "provenance": "src", "dis": "dis", "disease": "dis", "cat": "cat", "category": "cat",
-               "type": "cat", "pos": "pos", "position": "pos"}
+               "type": "cat", "pos": "pos", "position": "pos", "af": "af", "freq": "af", "frequency": "af",
+               "sub": "sub", "subst": "sub", "substitution": "sub"}
+
+
+def _ann_tok(facet, v):
+    """af / sub facet value (token, alias or prefix) -> token, or None."""
+    toks = ANN_AF_TOKENS if facet == "af" else ANN_SUB_TOKENS
+    v = _ANN_TOKEN_ALIAS[facet].get(v, v)
+    return v if v in toks else next((t for t in toks if v and t.startswith(v)), None)
 _ANN_ROWS_MEMO = {}          # (id(ann), cat) -> (ann, rows)   (ann-derived categories only)
 _RE_ANN_NUM = re.compile(r"^\d+$")
 _RE_ANN_RANGE = re.compile(r"^(\d+)\s*-\s*(\d+)$")
@@ -7569,13 +7801,16 @@ def _ann_build(ann, cat, extra=None):
             dis = v.get("diseases") or []
             cons = v.get("consequence") or ""
             src = _ANN_SRC_OF.get(v.get("provenance"))
+            afb = v.get("afBin") or _classify_af(v.get("gnomad"))
+            sub = v.get("substClass") or _classify_substitution(wt, mt)
             label = "%s%d%s · %s%s" % (wt, pos, mt, cons, (" · " + "; ".join(dis)) if dis else "")
             hay = " ".join(["variant variants", "%s%d%s" % (wt, pos, mt), cons, v.get("provenance") or "",
-                            "large-scale" if src == "large" else "", " ".join(dis),
+                            "large-scale" if src in ("cancer", "population", "other") else "", " ".join(dis),
                             " ".join(v.get("diseaseIds") or []), v.get("description") or "", v.get("clinVar") or "",
-                            " ".join(v.get("rsIds") or [])])
+                            " ".join(v.get("rsIds") or []), afb, sub])
             rows.append(_ann_row("var:%d" % i, cat, pos, pos, label, v.get("consequenceColor"), hay, [pos],
                                  cons=_cons_token(cons) if cons in CONSEQUENCE_COLORS else None, src=src,
+                                 af=_ANN_AF_OF.get(afb), sub=_ANN_SUB_OF.get(sub),
                                  dis=frozenset(x.lower() for x in list(dis) + list(v.get("diseaseIds") or [])),
                                  wt=wt.upper(), muts=frozenset([mt.upper()])))
     elif cat == "site":
@@ -7634,6 +7869,13 @@ def _ann_build(ann, cat, extra=None):
                                  "pdbe-kb binding %s %s %s" % (" ".join(bits), " ".join(str(x.get("name") or "") for x in ls),
                                                                " ".join(str(x.get("accession") or "") for x in its)),
                                  [p], kb=kind))
+    elif cat == "cus":
+        cu = CUSTOM_ANN.get((ann.get("uid") or "").upper()) or {}
+        for i, it in enumerate(cu.get("items") or []):
+            txt = _custom_text(it)
+            rows.append(_ann_row("cus:%d" % i, cat, it["position"], it["position"], txt, it["color"],
+                                 "custom %s %s" % (txt, cu.get("file") or ""), [it["position"]],
+                                 grp=it["label"].lower()))
     return rows
 
 
@@ -7648,7 +7890,7 @@ def ann_rows(ann, cat, extra=None):
             out.extend(ann_rows(ann, c, extra))
         return out
     cat = ann_category(cat) or cat
-    if cat in ("lig", "prt", "kb"):
+    if cat in ("lig", "prt", "kb", "cus"):          # not memoised: from extra / the custom-annotation store
         return _ann_build(ann or {}, cat, extra)
     key = (id(ann), cat)
     hit = _ANN_ROWS_MEMO.get(key)
@@ -7705,16 +7947,19 @@ def _ann_alt(text, qat, facet):
             tok = "uncertain"
         return (lambda r: tok is not None and r["f"].get("cons") == tok), facet
     if facet == "src":
-        tok = _ANN_SRC_ALIAS.get(lv) or next((t for t in ANN_SRC_TOKENS if lv and t.startswith(lv)), None)
-        return (lambda r: tok is not None and r["f"].get("src") == tok), facet
+        toks = _ANN_SRC_ALIAS.get(lv) or tuple(t for t in ANN_SRC_TOKENS if lv and t.startswith(lv))[:1]
+        return (lambda r: r["f"].get("src") in toks), facet
     if facet == "dis":
         return (lambda r: lv != "none" and lv in (r["f"].get("dis") or ())), facet
+    if facet in ("af", "sub"):
+        tok = _ann_tok(facet, lv) if lv != "none" else None
+        return (lambda r, k=facet: tok is not None and r["f"].get(k) == tok), facet
     if facet == "cat":
         c = ann_category(lv)
         if c:
             return (lambda r: r["cat"] == c), facet
         return (lambda r: bool(lv) and (r["f"].get("ptmcat") or "").startswith(lv)
-                or bool(lv) and r["f"].get("ptype") == lv), facet
+                or bool(lv) and r["f"].get("ptype") == lv or bool(lv) and r["f"].get("grp") == lv), facet
     if facet == "pos" or (qat < 0 and (_RE_ANN_NUM.match(v) or _RE_ANN_RANGE.match(v))):
         m = _RE_ANN_RANGE.match(v)
         if m:
@@ -7793,8 +8038,12 @@ def _ann_vocab(rows):
                     add("cons:" + r["f"]["cons"])
                 if r["f"].get("src"):
                     add("src:" + r["f"]["src"])
+                if r["f"].get("af"):
+                    add("af:" + r["f"]["af"])
+                if r["f"].get("sub"):
+                    add("sub:" + r["f"]["sub"])
         for w in ("pathogenic", "likely", "benign", "uncertain", "deleterious", "uniprot", "clinvar", "large-scale",
-                  "reviewed"):
+                  "reviewed", "cancer", "population"):
             add(w, 0)
         add("src:reviewed", 0)
     seen_dis = {}
@@ -7810,6 +8059,8 @@ def _ann_vocab(rows):
                 add(r["f"]["ptype"])
         elif r["cat"] == "lig":
             add(r["f"]["resn"].lower())
+        elif r["cat"] == "cus":
+            add("cat:" + _ann_quote(r["f"]["grp"]))
     for d, n in seen_dis.items():
         add("dis:" + _ann_quote(d), n)
     for c in cats:
@@ -7868,9 +8119,9 @@ def ann_filter_query(tokens=None, provenances=None, diseases=None, reviewed_only
 
 
 def ann_query_facets(query):
-    """Facet state of a query for the Filters menu: {cons, src, dis: set of values (None = no term),
+    """Facet state of a query for the Filters menu: {cons, src, af, sub, dis: set of values (None = no term),
     reviewed: bool}. Only single-facet terms count (cons:a|b ...); 'src:reviewed' alone = reviewed-only."""
-    out = {"cons": None, "src": None, "dis": None, "reviewed": False}
+    out = {"cons": None, "src": None, "af": None, "sub": None, "dis": None, "reviewed": False}
     for raw, alts in _ann_lex(query):
         text, qat = alts[0]
         i = text.find(":")
@@ -7884,14 +8135,16 @@ def ann_query_facets(query):
         elif fac == "cons":
             out["cons"] = {next((t for t in ANN_CONS_TOKENS if t.startswith(v.lower())), v.lower()) for v in vals}
         elif fac == "src":
-            out["src"] = {_ANN_SRC_ALIAS.get(v.lower(), v.lower()) for v in vals}
+            out["src"] = {t for v in vals for t in _ANN_SRC_ALIAS.get(v.lower(), (v.lower(),))}
+        elif fac in ("af", "sub"):
+            out[fac] = {_ann_tok(fac, v.lower()) or v.lower() for v in vals}
         elif fac == "dis":
             out["dis"] = set(vals)
     return out
 
 
 def ann_query_set(query, key, values):
-    """`query` with the term for facet `key` (cons | src | dis | reviewed) replaced by `values` (None or an
+    """`query` with the term for facet `key` (cons | src | af | sub | dis | reviewed) replaced by `values` (None or an
     'everything' set removes it; reviewed: values = bool). Other terms are kept as typed."""
     keep = []
     for raw, alts in _ann_lex(query):
@@ -7907,7 +8160,7 @@ def ann_query_set(query, key, values):
             keep.append("src:reviewed")
     elif values is not None:
         vals = list(values)
-        allv = ANN_CONS_TOKENS if key == "cons" else ANN_SRC_TOKENS if key == "src" else None
+        allv = {"cons": ANN_CONS_TOKENS, "src": ANN_SRC_TOKENS, "af": ANN_AF_TOKENS, "sub": ANN_SUB_TOKENS}.get(key)
         if allv is not None:
             vals = [t for t in allv if t in vals]
             if len(vals) < len(allv):
@@ -7966,6 +8219,27 @@ def _op_search(a):
     if a.get("suggest", True) not in (False, 0, "0", "false"):
         out["suggest"] = ann_suggest(rows, ann_last_term(q)[1])
     return out
+
+
+@_serve_op("custom_load")
+def _op_custom_load(a):
+    """{uid, path} -> custom_summary (the file is parsed here, kept for the session)."""
+    return custom_load(_arg_uid(a), str(a.get("path") or ""))
+
+
+@_serve_op("fit_rigid")
+def _op_fit_rigid(a):
+    """{a: [[x,y,z]..], b: [[x,y,z]..]} (paired) -> {matrix: 4x4 row-major moving b onto a, rmsd, n}."""
+    A, B = a.get("a") or [], a.get("b") or []
+    if len(A) != len(B) or len(A) < 3:
+        raise ValueError("need >= 3 paired points")
+    m, rmsd = fit_rigid(A, B)
+    return {"matrix": m, "rmsd": rmsd, "n": len(A)}
+
+
+@_serve_op("custom_clear")
+def _op_custom_clear(a):
+    return custom_clear(_arg_uid(a))
 
 
 @_serve_op("filter_query")

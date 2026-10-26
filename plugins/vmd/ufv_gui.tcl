@@ -36,7 +36,7 @@ namespace eval ::ufv::gui {
         border #c9d2d7  btn #edf1f3  hover #e0e7ea  sel #d5ece8  drawer #f6f8f9  on #d3ebe6  led #9aa7ae
         status #a33333  ok #37474f  link #1565c0  bg #ffffff  chipbg #ffffff
         pathogenic #d55e00  deleterious #e6a817  benign #0072b2  uncertain #9e9e9e
-        reviewed #42a5f5  clinvar #ab47bc  large #26c6da
+        reviewed #42a5f5  clinvar #ab47bc  cancer #e65100  population #26c6da  other #78909c
     }
     variable U
     array set U [list down "\u25be" right "\u25b8" ext "\u2197" x "\u2715" no "\u2116" on "\u2611" off "\u2610" \
@@ -715,11 +715,12 @@ proc ::ufv::gui::build {} {
     bind $r.f <Escape> {::ufv::gui::sugg_hide}
     bind $r.f <FocusOut> {after 150 {if {[focus] ne ".ufvsugg.l"} ::ufv::gui::sugg_hide}}
     btn $r.x $U(reset) ::ufv::gui::ann_reset "Uncheck all categories" -font ufvIcon -padx 5 -pady 0
-    set fm [mbtn $r.mo "Filters $U(down)" "Variant filters: add / remove search terms (consequence, source, reviewed, diseases) and the sphere colours" -font ufvSym]
+    set fm [mbtn $r.mo "Filters $U(down)" "Variant filters: add / remove search terms (consequence, source, allele frequency, substitution, reviewed, diseases) and the sphere colours" -font ufvSym]
     $fm configure -postcommand ::ufv::gui::filters_post
     set S(filtmenu) $fm
-    grid $r.k $r.f $r.x $r.mo -sticky nsew
-    grid configure $r.f $r.x $r.mo -padx {4 0}
+    btn $r.cu "+" ::ufv::gui::ann_custom_load "Load custom annotations (CSV / TSV: position, label, value, color, note) - shown as the Custom category" -padx 5 -pady 0
+    grid $r.k $r.f $r.x $r.mo $r.cu -sticky nsew
+    grid configure $r.f $r.x $r.mo $r.cu -padx {4 0}
     # the drop-down and the search share the spare width (2:3); the drop-down's list is as wide as its longest entry
     grid columnconfigure $r 0 -weight 2
     grid columnconfigure $r 1 -weight 3
@@ -1865,14 +1866,16 @@ proc ::ufv::gui::_qfacet {text qat} {
     set i [string first : $text]
     if {$i > 0 && ($qat < 0 || $i < $qat)} {
         set f [string tolower [string range $text 0 $i-1]]
-        set fac {cons cons consequence cons src src source src prov src provenance src dis dis disease dis cat cat category cat type cat pos pos position pos}
+        set fac {cons cons consequence cons src src source src prov src provenance src dis dis disease dis cat cat category cat type cat pos pos position pos af af freq af frequency af sub sub subst sub substitution sub}
         if {[dict exists $fac $f]} { return [list [dict get $fac $f] [string range $text $i+1 end]] }
     }
     return ""
 }
-# Facet state of the query (ufv_core.ann_query_facets): cons / src / dis = value list or "*" (no term), reviewed 0/1
+# Facet state of the query (ufv_core.ann_query_facets): cons / src / af / sub / dis = value list or "*" (no term),
+# reviewed 0/1
 proc ::ufv::gui::qfacets {q} {
-    set out [dict create cons * src * dis * reviewed 0]
+    variable FACTOK
+    set out [dict create cons * src * af * sub * dis * reviewed 0]
     foreach t [qlex $q] {
         lassign $t raw alts
         lassign [lindex $alts 0] text qat
@@ -1895,22 +1898,43 @@ proc ::ufv::gui::qfacets {q} {
             }
             src {
                 set l {}
+                # alias -> source tokens ("large" = every large-scale bucket, as before the split)
+                set amap {uniprot uniprot reviewed uniprot clinvar clinvar clingen clinvar cancer cancer cosmic cancer
+                    tcga cancer somatic cancer population population gnomad population other other
+                    large {cancer population other} large-scale {cancer population other}
+                    largescale {cancer population other} large_scale {cancer population other}}
                 foreach x $vals {
                     set x [string tolower $x]
-                    lappend l [expr {[dict exists {uniprot uniprot reviewed uniprot clinvar clinvar large large large-scale large largescale large large_scale large} $x] ? [dict get {uniprot uniprot reviewed uniprot clinvar clinvar large large large-scale large largescale large large_scale large} $x] : $x}]
+                    lappend l {*}[expr {[dict exists $amap $x] ? [dict get $amap $x] : [list $x]}]
                 }
                 dict set out src $l
+            }
+            af - sub {
+                set l {}
+                foreach x $vals {
+                    set x [string tolower $x]
+                    if {[dict exists $FACTOK alias $fac $x]} { set x [dict get $FACTOK alias $fac $x] }
+                    set k $x
+                    foreach c [dict get $FACTOK $fac] { if {[string first $x $c] == 0} { set k $c; break } }
+                    lappend l $k
+                }
+                dict set out $fac $l
             }
             dis { dict set out dis $vals }
         }
     }
     return $out
 }
+# af: / sub: facet tokens and aliases (ufv_core ANN_AF_TOKENS / ANN_SUB_TOKENS / _ANN_TOKEN_ALIAS)
+set ::ufv::gui::FACTOK [dict create af {absent ultrarare rare common} \
+    sub {stop gpc charge hydrophobicity conservative complex} \
+    alias {af {nognomad absent ultra-rare ultrarare ultra ultrarare}
+           sub {nonsense stop gly gpc pro gpc cys gpc hydro hydrophobicity indel complex other complex}}]
 proc ::ufv::gui::_qquote {s} {
     set s [string map {\" ""} $s]
     return [expr {[regexp {[\s|:]} $s] ? "\"$s\"" : $s}]
 }
-# The query with the term of facet key (cons | src | dis | reviewed) replaced (ufv_core.ann_query_set).
+# The query with the term of facet key (cons | src | af | sub | dis | reviewed) replaced (ufv_core.ann_query_set).
 #   values "*" removes the term; cons / src with every value also removes it; reviewed: 0/1.
 proc ::ufv::gui::qset {q key values} {
     set keep {}
@@ -1926,7 +1950,8 @@ proc ::ufv::gui::qset {q key values} {
     if {$key eq "reviewed"} {
         if {$values} { lappend keep src:reviewed }
     } elseif {$values ne "*"} {
-        set all [dict get {cons {pathogenic deleterious benign uncertain} src {uniprot clinvar large} dis {}} $key]
+        set all [dict get {cons {pathogenic deleterious benign uncertain} src {uniprot clinvar cancer population other}
+            af {absent ultrarare rare common} sub {stop gpc charge hydrophobicity conservative complex} dis {}} $key]
         if {[llength $all]} {
             set vals {}; foreach x $all { if {$x in $values} { lappend vals $x } }
             if {[llength $vals] < [llength $all]} { lappend keep "$key:[expr {[llength $vals] ? [join $vals |] : {none}}]" }
@@ -1951,13 +1976,32 @@ proc ::ufv::gui::filters_post {} {
     }
     $m add separator
     $m add command -label "Source" -state disabled
-    foreach {tok lbl sw} {uniprot "UniProt reviewed" reviewed clinvar "ClinVar" clinvar large "Large-scale studies" large} {
+    foreach {tok lbl sw} {uniprot "UniProt reviewed" reviewed clinvar "ClinVar / ClinGen" clinvar cancer "Cancer somatic (COSMIC/TCGA)" cancer
+                          population "Population (gnomAD/ExAC/TOPMed)" population other "Other large-scale studies" other} {
         set v(fs,$tok) [expr {[dict get $f src] eq "*" || $tok in [dict get $f src]}]
         $m add checkbutton -label $lbl -variable ::ufv::gui::v(fs,$tok) -command [list ::ufv::gui::filter_toggle src] \
             -image [swatch p$sw $C($sw)] -compound left
     }
     set v(frev) [dict get $f reviewed]
     $m add checkbutton -label "Reviewed variants only" -variable ::ufv::gui::v(frev) -command [list ::ufv::gui::filter_toggle reviewed]
+    # allele frequency / substitution type (cascades, like Diseases: keeps the menu short)
+    foreach {key title items} {
+        af "Allele frequency (gnomAD)" {absent "No gnomAD frequency" #d55e00 ultrarare "Ultra-rare (<0.01%)" #e69f00
+            rare "Rare (0.01-1%)" #56b4e9 common "Common (>=1%)" #0072b2}
+        sub "Substitution type" {stop "Stop gained" #a1887f gpc "Gly / Pro / Cys change" #cc79a7 charge "Charge change" #d55e00
+            hydrophobicity "Hydrophobicity change" #e69f00 conservative "Conservative" #0072b2 complex "Other (indel / complex)" #9e9e9e}
+    } {
+        set cm $m.$key
+        if {![winfo exists $cm]} { menu $cm -tearoff 0 }
+        $cm delete 0 end
+        set sel [dict get $f $key]
+        foreach {tok lbl hex} $items {
+            set v(f$key,$tok) [expr {$sel eq "*" || $tok in $sel}]
+            $cm add checkbutton -label $lbl -variable ::ufv::gui::v(f$key,$tok) -command [list ::ufv::gui::filter_toggle $key] \
+                -image [swatch $key[string trimleft $hex #] $hex] -compound left
+        }
+        $m add cascade -label [expr {$sel eq "*" ? $title : "$title ([llength $sel] of [expr {[llength $items] / 3}])"}] -menu $cm
+    }
     $m add separator
     # diseases of this accession (cascade)
     set dm $m.dis
@@ -1993,15 +2037,15 @@ proc ::ufv::gui::filters_post {} {
         set vc [::ufv::st::get $m0 [list annvc [::ufv::annot::_uid $m0]] {}]
         if {[dict exists $vc color]} { set cur [dict get $vc color] }
     }
-    foreach p {consequence disease provenance} { if {[string match [string range $p 0 2]* $cur]} { set v(vcolor) $p } }
-    foreach p {consequence disease provenance} {
+    foreach p {consequence disease provenance frequency substitution} { if {[string match [string range $p 0 2]* $cur]} { set v(vcolor) $p } }
+    foreach p {consequence disease provenance frequency substitution} {
         $m add radiobutton -label "  $p" -value $p -variable ::ufv::gui::v(vcolor) -command ::ufv::gui::filter_color
     }
     $m add separator
     $m add command -label "Clear the search" -command ::ufv::gui::ann_clear_search
 }
 proc ::ufv::gui::filter_toggle {key} { filter_apply [filter_q $key] }
-# The query after a Filters-menu change of facet key (cons src reviewed dis), from the menu's tick state.
+# The query after a Filters-menu change of facet key (cons src af sub reviewed dis), from the menu's tick state.
 proc ::ufv::gui::filter_q {key} {
     variable v; variable S
     switch -- $key {
@@ -2011,8 +2055,13 @@ proc ::ufv::gui::filter_q {key} {
             set q [qset $v(filter) cons [expr {[llength $on] ? $on : "*"}]]
         }
         src {
-            set on {}; foreach t {uniprot clinvar large} { if {$v(fs,$t)} { lappend on $t } }
+            set on {}; foreach t {uniprot clinvar cancer population other} { if {$v(fs,$t)} { lappend on $t } }
             set q [qset $v(filter) src $on]
+        }
+        af - sub {
+            variable FACTOK
+            set on {}; foreach t [dict get $FACTOK $key] { if {$v(f$key,$t)} { lappend on $t } }
+            set q [qset $v(filter) $key $on]
         }
         reviewed { set q [qset $v(filter) reviewed $v(frev)] }
         dis {
@@ -2033,13 +2082,22 @@ proc ::ufv::gui::filter_apply {q} {
     variable v; variable S
     set v(filter) $q
     # variant filters: show the variant rows (unless All is shown)
-    if {$S(anncat) ni {var all} && [regexp {(^|\s)(cons|src|dis)[:]} $q]} { set S(anncat) var; ann_columns; ann_counts }
+    if {$S(anncat) ni {var all} && [regexp {(^|\s)(cons|src|af|sub|dis)[:]} $q]} { set S(anncat) var; ann_columns; ann_counts }
     ann_search_now
 }
 proc ::ufv::gui::filter_color {} {
     variable v
     foreach m [targets] { if {[::ufv::st::has $m]} { ::ufv::annot::var_color $m $v(vcolor) } }
     status "variant spheres coloured by $v(vcolor)."
+}
+proc ::ufv::gui::ann_custom_load {} {
+    variable S
+    set m [amol]
+    if {$m eq "" || ![::ufv::st::has $m]} { status "load a structure first."; return }
+    set f [tk_getOpenFile -title "Custom annotations" -filetypes {{"Annotation tables" {.csv .tsv .txt}} {"All files" *}}]
+    if {$f eq ""} return
+    run "custom annotations" [list ufv_load_annotations $f $m]
+    set S(anncat) cus; ann_columns; ann_counts
 }
 proc ::ufv::gui::ann_clear_search {} {
     variable v

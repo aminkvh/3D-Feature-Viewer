@@ -747,8 +747,8 @@ proc ::ufv::variant_opts {argl} {
     return [list $molid $opts]
 }
 
-# ufv_variants ?pathogenic|deleterious|uncertain|benign|all ...? ?-provenance reviewed|clinvar|large?
-#              ?-disease "A;B"|none? ?-color consequence|disease|provenance? ?-reviewed? ?molid?
+# ufv_variants ?pathogenic|deleterious|uncertain|benign|all ...? ?-provenance reviewed|clinvar|cancer|population|other|large?
+#              ?-disease "A;B"|none? ?-color consequence|disease|provenance|frequency|substitution? ?-reviewed? ?molid?
 # = check exactly the matching variant rows (the panel's list follows).
 proc ufv_variants {args} {
     lassign [::ufv::variant_opts $args] molid opts
@@ -791,7 +791,7 @@ proc ufv_mutagenesis {{molid ""}} {
 namespace eval ::ufv::annot {
     # categories, ids, row texts and the search matcher are ufv_core's (ann_rows / search ops), shared with the
     # PyMOL panel: ptm var site mutag dom lig prt kb
-    variable cats {ptm var site mutag dom lig prt kb}
+    variable cats {ptm var site mutag dom lig prt kb cus}
     variable info [dict create \
         ptm   {label PTMs short PTM layer ptm} \
         var   {label Variants short Var layer var} \
@@ -800,16 +800,30 @@ namespace eval ::ufv::annot {
         dom   {label Domains short Dom layer ann:dom} \
         lig   {label Ligands short Lig layer lig} \
         prt   {label Partners short Prt layer feat:partner} \
-        kb    {label PDBe-KB short KB layer feat:kb}]
+        kb    {label PDBe-KB short KB layer feat:kb} \
+        cus   {label Custom short Cus layer cus}]
     # the annotation list each ann-derived category comes from
     variable annkey {ptm ptms var variants site sites mutag mutagenesis dom domains}
     variable sev [dict create "Likely pathogenic or pathogenic" 0 "Predicted deleterious" 1 "Uncertain significance" 2 \
         "Likely benign or benign" 3]
-    variable provcol [dict create "UniProt reviewed" #42a5f5 ClinVar #ab47bc "Large scale studies" #26c6da]
-    variable provtok [dict create reviewed "UniProt reviewed" uniprot "UniProt reviewed" clinvar ClinVar \
-        large "Large scale studies" largescale "Large scale studies" large_scale "Large scale studies"]
+    variable provcol [dict create "UniProt reviewed" #42a5f5 "ClinVar / ClinGen" #ab47bc "Cancer somatic (COSMIC/TCGA)" #e65100 \
+        "Population (gnomAD/ExAC/TOPMed)" #26c6da "Other large-scale studies" #78909c]
+    # token -> provenance categories ("large" keeps its old meaning: every large-scale bucket)
+    variable provtok [dict create reviewed {{UniProt reviewed}} uniprot {{UniProt reviewed}} clinvar {{ClinVar / ClinGen}} \
+        clingen {{ClinVar / ClinGen}} cancer {{Cancer somatic (COSMIC/TCGA)}} cosmic {{Cancer somatic (COSMIC/TCGA)}} \
+        somatic {{Cancer somatic (COSMIC/TCGA)}} population {{Population (gnomAD/ExAC/TOPMed)}} gnomad {{Population (gnomAD/ExAC/TOPMed)}} \
+        other {{Other large-scale studies}} \
+        large {{Cancer somatic (COSMIC/TCGA)} {Population (gnomAD/ExAC/TOPMed)} {Other large-scale studies}} \
+        largescale {{Cancer somatic (COSMIC/TCGA)} {Population (gnomAD/ExAC/TOPMed)} {Other large-scale studies}} \
+        large_scale {{Cancer somatic (COSMIC/TCGA)} {Population (gnomAD/ExAC/TOPMed)} {Other large-scale studies}}]
     variable unclassified #9e9e9e
+    # allele-frequency / substitution tokens -> colours (ufv_core AF_COLORS / SUBST_COLORS = the extension's)
+    variable afcol [dict create absent #d55e00 ultrarare #e69f00 rare #56b4e9 common #0072b2]
+    variable subcol [dict create stop #a1887f gpc #cc79a7 charge #d55e00 hydrophobicity #e69f00 conservative #0072b2 \
+        complex #9e9e9e]
     if {![array exists rowcache]} { array set rowcache {} }
+    # custom annotations per accession (ufv_load_annotations): {file name, items {{pos color} ...}} from the backend
+    if {![array exists custom]} { array set custom {} }
 }
 proc ::ufv::annot::label {cat} { variable info; return [dict get $info $cat label] }
 proc ::ufv::annot::short {cat} { variable info; return [dict get $info $cat short] }
@@ -823,7 +837,7 @@ proc ::ufv::annot::cat_of {name} {
     }
     # ("dom" alone is the cartoon's domain-point layer; the category is "domains")
     set al {ptms ptm variant var variants var sites site mutagenesis mutag domain dom domains dom ligand lig
-        ligands lig partner prt partners prt pdbekb kb pdbe-kb kb binding kb}
+        ligands lig partner prt partners prt pdbekb kb pdbe-kb kb binding kb custom cus user cus}
     if {[dict exists $al $n]} { return [dict get $al $n] }
     return ""
 }
@@ -867,6 +881,13 @@ proc ::ufv::annot::all_ids {mol cat} {
             set r $::ufv::feat::kb($uid)
             return [lmap p [lsort -integer -unique [concat [dict get $r ligand] [dict get $r interface]]] { format kb:%s $p }]
         }
+        cus {
+            if {![info exists ::ufv::annot::custom($uid)]} { return {} }
+            set out {}
+            set n [llength [dict get $::ufv::annot::custom($uid) items]]
+            for {set i 0} {$i < $n} {incr i} { lappend out cus:$i }
+            return $out
+        }
     }
     return {}
 }
@@ -905,7 +926,8 @@ proc ::ufv::annot::extra_json {mol} {
 proc ::ufv::annot::extra_sig {mol} {
     set kb [info exists ::ufv::feat::kb([_uid $mol])]
     set prt [expr {$mol ne "" && [::ufv::st::has $mol] ? [llength [::ufv::st::get $mol partner_rows "-"]] : "-"}]
-    return [list [_uid $mol] $mol [lig_codes $mol] $prt $kb]
+    set cus [expr {[info exists ::ufv::annot::custom([_uid $mol])] ? $::ufv::annot::custom([_uid $mol]) : ""}]
+    return [list [_uid $mol] $mol [lig_codes $mol] $prt $kb $cus]
 }
 # Rows of the panel's list (backend ann_rows, so the texts are the PyMOL panel's): cb ok {row dicts}
 #   row: id cat pos end poslabel label color pts
@@ -1047,14 +1069,15 @@ proc ::ufv::annot::apply_opts {mol cat opts} {
     set a [::ufv::annotations $uid]
     if {$cat eq "var"} {
         set col [string tolower [expr {[dict exists $opts color] ? [dict get $opts color] : ""}]]
-        if {![regexp {^(con|dis|pro)} $col]} { set col consequence }
+        if {![regexp {^(con|dis|pro|fre|sub)} $col]} { set col consequence }
         set vc [dict create color $col diseases [expr {[dict exists $opts disease] ? [parse_dis $a [dict get $opts disease]] : "*"}]]
         ::ufv::st::put $mol [list annvc $uid] $vc
         return [put $mol var [var_match $a $opts]]
     }
     return [put $mol $cat [all_ids $mol $cat]]
 }
-# Variant colour profile of the panel (consequence | disease | provenance), redraws the checked variants.
+# Variant colour profile of the panel (consequence | disease | provenance | frequency | substitution), redraws the
+# checked variants.
 proc ::ufv::annot::var_color {mol profile} {
     set uid [_uid $mol]
     set vc [::ufv::st::get $mol [list annvc $uid] [dict create diseases *]]
@@ -1071,8 +1094,7 @@ proc ::ufv::annot::parse_prov {spec} {
     foreach tok [regexp -all -inline {[^;,|\s]+} $spec] {
         set t [string tolower $tok]
         if {[dict exists $provtok $t]} {
-            set c [dict get $provtok $t]
-            if {$c ni $out} { lappend out $c }
+            foreach c [dict get $provtok $t] { if {$c ni $out} { lappend out $c } }
             continue
         }
         foreach c [dict keys $provcol] { if {[string first $t [string tolower $c]] == 0 && $c ni $out} { lappend out $c } }
@@ -1150,6 +1172,15 @@ proc ::ufv::annot::groups {mol cat ids} {
     set uid [_uid $mol]
     set g [dict create]
     if {$cat eq "kb"} { return [_kb_groups $mol $uid $ids] }
+    if {$cat eq "cus"} {
+        if {![info exists ::ufv::annot::custom($uid)]} { return $g }
+        set items [dict get $::ufv::annot::custom($uid) items]
+        foreach i [_idx $ids] {
+            set x [lindex $items $i]
+            if {$x ne ""} { dict lappend g [lindex $x 1] [lindex $x 0] }
+        }
+        return $g
+    }
     if {![info exists ::ufv::ann($uid)]} { return $g }
     set a $::ufv::ann($uid)
     if {$cat eq "var"} { return [_var_groups $mol $a [_idx $ids]] }
@@ -1179,7 +1210,7 @@ proc ::ufv::annot::groups {mol cat ids} {
 }
 # one sphere per position, coloured by its most severe checked variant under the colour profile
 proc ::ufv::annot::_var_groups {mol a idx} {
-    variable sev; variable provcol; variable unclassified
+    variable sev; variable provcol; variable unclassified; variable afcol; variable subcol
     set vc [::ufv::st::get $mol [list annvc [_uid $mol]] {}]
     set color [string tolower [expr {[dict exists $vc color] ? [dict get $vc color] : "consequence"}]]
     set dset [expr {[dict exists $vc diseases] ? [dict get $vc diseases] : "*"}]
@@ -1209,6 +1240,12 @@ proc ::ufv::annot::_var_groups {mol a idx} {
         } elseif {[string match prov* $color]} {
             set pv [dict get $v provenance]
             set hex [expr {[dict exists $provcol $pv] ? [dict get $provcol $pv] : $unclassified}]
+        } elseif {[string match fre* $color] || [string match af* $color]} {
+            set t [expr {[dict exists $v af] ? [dict get $v af] : ""}]
+            set hex [expr {[dict exists $afcol $t] ? [dict get $afcol $t] : $unclassified}]
+        } elseif {[string match sub* $color]} {
+            set t [expr {[dict exists $v sub] ? [dict get $v sub] : ""}]
+            set hex [expr {[dict exists $subcol $t] ? [dict get $subcol $t] : $unclassified}]
         } else {
             set hex [dict get $v color]
             if {$hex eq ""} { set hex $unclassified }
@@ -1267,6 +1304,37 @@ proc ufv_reset_annotations {{molid ""}} {
     ::ufv::annot::reset $mol
     ::ufv::status "mol $mol: $n annotation row(s) unchecked in every category."
     return $n
+}
+# ufv_load_annotations file ?molid?  - your own residue annotations (CSV / TSV) as the Custom category, shown as
+#   spheres. Columns: position (123, R123W, p.Arg123Trp or 120-130), optional label, value, color, note; without a
+#   header row: position, label, value. Parsed by the backend (ufv_core.parse_custom_annotations, the browser
+#   extension's format); kept for the session and added to ufv_csv as the custom_annotation column.
+proc ufv_load_annotations {file {molid ""}} {
+    set mol [::ufv::resolve $molid]
+    set uid [::ufv::annot::_uid $mol]
+    if {$uid eq "-"} { error "no accession: load or map a structure first" }
+    set s [::ufv::backend::call custom_load [dict create uid $uid path [file normalize $file]]]
+    set items {}
+    foreach it [dict get $s items] { lappend items [list [dict get $it position] [dict get $it color]] }
+    set ::ufv::annot::custom($uid) [dict create file [dict get $s file] items $items]
+    ::ufv::annot::put $mol cus [::ufv::annot::all_ids $mol cus]
+    set gs [lmap g [dict get $s groups] { format "%s %d" [dict get $g label] [dict get $g count] }]
+    set sk [dict get $s skipped]
+    ::ufv::status [format "%s: %d custom residue(s) from %s%s; groups: %s." $uid [dict get $s residues] [dict get $s file] \
+        [expr {$sk ? " ($sk row(s) skipped: no valid position)" : ""}] [expr {[llength $gs] ? [join $gs ", "] : "none"}]]
+    return [dict get $s residues]
+}
+# ufv_unload_annotations ?molid?  - remove the custom annotations of the molecule's accession.
+proc ufv_unload_annotations {{molid ""}} {
+    set mol [::ufv::resolve $molid]
+    set uid [::ufv::annot::_uid $mol]
+    ::ufv::annot::put $mol cus {}
+    catch { ::ufv::backend::call custom_clear [dict create uid $uid] }
+    set had [info exists ::ufv::annot::custom($uid)]
+    unset -nocomplain ::ufv::annot::custom($uid)
+    ::ufv::emit annot $mol cus
+    ::ufv::status "$uid: custom annotations [expr {$had ? {removed} : {were not loaded}}]."
+    return $had
 }
 # ufv_show_annotations ?molid? category ?ids? ?mode? ?-search query?
 #   Script the annotation list: check exactly (mode set), add or remove rows of one category (ptms variants sites
@@ -2094,7 +2162,7 @@ proc ufv_align {{refmol ""}} {
             set mmap [::ufv::feat::ca_by_uni $m]
             set pairs {}
             dict for {u i} $mmap { if {[dict exists $rmap $u]} { lappend pairs [list $i [dict get $rmap $u]] } }
-            if {[llength $pairs] >= 3} {
+            if {[llength $pairs] >= 10} {
                 set pairs [lsort -integer -index 0 $pairs]
                 set mi {}; set ri {}
                 foreach p $pairs { lappend mi [lindex $p 0]; lappend ri [lindex $p 1] }

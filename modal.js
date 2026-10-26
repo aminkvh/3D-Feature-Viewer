@@ -147,8 +147,10 @@ const UFVModal = (() => {
                     </div>
                     <div id="ufv-var-panel" class="ufv-filter-scroll ufv-hidden">
                         <div id="ufv-dis-section" class="ufv-collapsible ufv-hidden"><div class="ufv-collapsible-hdr" id="ufv-dis-toggle"><span class="ufv-collapsible-chevron">&#9660;</span><span>Disease <span class="ufv-section-source">— HumanVar</span></span><div class="ufv-section-actions"><button class="ufv-section-btn" id="ufv-dis-all">All</button><button class="ufv-section-btn" id="ufv-dis-none">None</button><button class="ufv-section-btn ufv-brush-btn" id="ufv-brush-var" title="Colour variant spheres by disease">C</button></div></div><div class="ufv-collapsible-body" id="ufv-dis-body"><div id="ufv-dis-list"></div></div></div>
-                        <div class="ufv-collapsible"><div class="ufv-collapsible-hdr" id="ufv-prov-toggle"><span class="ufv-collapsible-chevron">&#9654;</span><span>Provenance</span><div class="ufv-section-actions"><button class="ufv-section-btn" id="ufv-prov-all">All</button><button class="ufv-section-btn" id="ufv-prov-none">None</button><button class="ufv-section-btn ufv-brush-btn" id="ufv-brush-prov" title="Colour by consequence">C</button></div></div><div class="ufv-collapsible-body ufv-collapsed" id="ufv-prov-body"><div id="ufv-prov-list"></div></div></div>
+                        <div class="ufv-collapsible"><div class="ufv-collapsible-hdr" id="ufv-prov-toggle"><span class="ufv-collapsible-chevron">&#9654;</span><span>Provenance</span><div class="ufv-section-actions"><button class="ufv-section-btn" id="ufv-prov-all">All</button><button class="ufv-section-btn" id="ufv-prov-none">None</button><button class="ufv-section-btn ufv-brush-btn" id="ufv-brush-prov" title="Colour by source">C</button></div></div><div class="ufv-collapsible-body ufv-collapsed" id="ufv-prov-body"><div id="ufv-prov-list"></div></div></div>
                         <div class="ufv-collapsible"><div class="ufv-collapsible-hdr" id="ufv-cons-toggle"><span class="ufv-collapsible-chevron">&#9654;</span><span>Consequence</span><div class="ufv-section-actions"><button class="ufv-section-btn" id="ufv-cons-all">All</button><button class="ufv-section-btn" id="ufv-cons-none">None</button><button class="ufv-section-btn ufv-brush-btn" id="ufv-brush-dis" title="Colour by consequence">C</button></div></div><div class="ufv-collapsible-body ufv-collapsed" id="ufv-cons-body"><div id="ufv-cons-list"></div></div></div>
+                        <div class="ufv-collapsible"><div class="ufv-collapsible-hdr" id="ufv-af-toggle"><span class="ufv-collapsible-chevron">&#9654;</span><span>Allele frequency <span class="ufv-section-source">— gnomAD</span></span><div class="ufv-section-actions"><button class="ufv-section-btn" id="ufv-af-all">All</button><button class="ufv-section-btn" id="ufv-af-none">None</button><button class="ufv-section-btn ufv-brush-btn" id="ufv-brush-af" title="Colour by gnomAD allele frequency">C</button></div></div><div class="ufv-collapsible-body ufv-collapsed" id="ufv-af-body"><div id="ufv-af-list"></div></div></div>
+                        <div class="ufv-collapsible"><div class="ufv-collapsible-hdr" id="ufv-subst-toggle"><span class="ufv-collapsible-chevron">&#9654;</span><span>Substitution type</span><div class="ufv-section-actions"><button class="ufv-section-btn" id="ufv-subst-all">All</button><button class="ufv-section-btn" id="ufv-subst-none">None</button><button class="ufv-section-btn ufv-brush-btn" id="ufv-brush-subst" title="Colour by physico-chemical change of the substitution">C</button></div></div><div class="ufv-collapsible-body ufv-collapsed" id="ufv-subst-body"><div id="ufv-subst-list"></div></div></div>
                         <div class="ufv-collapsible ufv-hidden" id="ufv-vptm-section"><div class="ufv-collapsible-hdr" id="ufv-vptm-toggle"><span class="ufv-collapsible-chevron">&#9654;</span><span>PTM sites</span><div class="ufv-section-actions"><button class="ufv-section-btn" id="ufv-vptm-all">All</button><button class="ufv-section-btn" id="ufv-vptm-none">None</button><button class="ufv-section-btn ufv-brush-btn" id="ufv-brush-vptm" title="Colour by PTM type">C</button></div></div><div class="ufv-collapsible-body ufv-collapsed" id="ufv-vptm-body"><div id="ufv-vptm-list"></div></div></div>
                         <div class="ufv-collapsible ufv-hidden" id="ufv-sites-section-var"><div class="ufv-collapsible-hdr" id="ufv-sites-var-toggle"><span class="ufv-collapsible-chevron">&#9654;</span><span>Sites</span><div class="ufv-section-actions"><button class="ufv-section-btn" id="ufv-sites-var-all">All</button><button class="ufv-section-btn" id="ufv-sites-var-none">None</button><button class="ufv-section-btn ufv-brush-btn" id="ufv-brush-vsite" title="Colour by consequence">C</button></div></div><div class="ufv-collapsible-body ufv-collapsed" id="ufv-sites-var-body"><div id="ufv-sites-var-list"></div></div></div>
                         <div class="ufv-collapsible ufv-hidden" id="ufv-ligands-section-var"><div class="ufv-collapsible-hdr" id="ufv-ligands-var-toggle"><span class="ufv-collapsible-chevron">&#9654;</span><span>Ligands</span><div class="ufv-section-actions"><label class="ufv-toggle-switch ufv-ions-toggle" title="Exclude water &amp; ions"><input type="checkbox" id="ufv-ligands-ions-var"><span class="ufv-toggle-slider"></span></label><button class="ufv-section-btn" id="ufv-ligands-var-all">All</button><button class="ufv-section-btn" id="ufv-ligands-var-none">None</button></div></div><div class="ufv-collapsible-body ufv-collapsed" id="ufv-ligands-var-body"><div id="ufv-ligands-var-list"></div></div></div>
@@ -311,6 +313,12 @@ const UFVModal = (() => {
         byId('ufv-dis-toggle').addEventListener('click', e => { if (!e.target.closest('button')) toggleCollapsible('ufv-dis-body', 'ufv-dis-toggle'); });
         byId('ufv-prov-toggle').addEventListener('click', e => { if (!e.target.closest('button')) toggleCollapsible('ufv-prov-body', 'ufv-prov-toggle'); });
         byId('ufv-cons-toggle').addEventListener('click', e => { if (!e.target.closest('button')) toggleCollapsible('ufv-cons-body', 'ufv-cons-toggle'); });
+        [['af', 'afBin'], ['subst', 'substClass']].forEach(([k, dim]) => {
+            byId(`ufv-${k}-toggle`).addEventListener('click', e => { if (!e.target.closest('button')) toggleCollapsible(`ufv-${k}-body`, `ufv-${k}-toggle`); });
+            byId(`ufv-${k}-all`).addEventListener('click', () => varSectionSetAll(dim, true));
+            byId(`ufv-${k}-none`).addEventListener('click', () => varSectionSetAll(dim, false));
+            byId(`ufv-brush-${k}`).addEventListener('click', e => { e.stopPropagation(); setColorProfile(dim); });
+        });
         byId('ufv-vptm-toggle').addEventListener('click', e => { if (!e.target.closest('button')) toggleCollapsible('ufv-vptm-body', 'ufv-vptm-toggle'); });
         byId('ufv-vptm-all').addEventListener('click', () => variantPtmSetAll(true));
         byId('ufv-vptm-none').addEventListener('click', () => variantPtmSetAll(false));
@@ -488,8 +496,7 @@ const UFVModal = (() => {
             if (UFVState.state.uniprotId !== requestedId) return;
             Object.assign(s, data);
             s.ptmGroups = DataProcessor.groupPTMsByCategory(s.ptms);
-            s.activeConsequences = new Set(Object.keys(DataProcessor.getConsequenceSummary(s.variants)));
-            s.activeProvenances = new Set(Object.keys(DataProcessor.getProvenanceSummary(s.variants)));
+            initVariantAxes(s);
             s.analysis.alphaMissense = UFVAnalysis.aggregateAlphaMissense(s.variants, s.amMap);
             DataProcessor.computeDiseaseColors(s.variants);
             const _ds = DataProcessor.getDiseaseSummary(s.variants);
@@ -646,6 +653,7 @@ const UFVModal = (() => {
         }
         if (_loadSeq !== mySeq) return; // a newer load owns the viewer now
         StructureViewer.hoverCb = onHover;
+        StructureViewer.seqHoverCb = markSequenceHover;
         StructureViewer.clickCb = onClick;
         StructureViewer.ligandClickCb = onLigandClick;
         // Enumerate ligands present in the loaded model (AlphaFill/SwissModel cofactors etc.).
@@ -696,6 +704,68 @@ const UFVModal = (() => {
         // Multichain: fetch the OTHER subunits' (partner proteins') annotations and overlay their disease
         // variants, off the critical path. Clicking a partner residue then shows that protein's data.
         loadPartnerAnnotations(structure, requestedId, mySeq);
+        updateOverlayToggle();
+    }
+
+    // "Overlay" dropdown in the title row: superpose other structures of this protein onto the loaded one
+    // as translucent, uniformly coloured cartoons. Display only — annotations stay on the main structure.
+    // A new main structure clears all overlays (the frame drops them on load).
+    const OVERLAY_COLORS = ['#ff8a65', '#ba68c8', '#4db6ac', '#ffd54f'];
+    let _overlayOn = new Map(); // structure index -> colour
+    function updateOverlayToggle() {
+        const host = byId('ufv-modal-heading')?.parentElement; if (!host) return;
+        byId('ufv-overlay-wrap')?.remove();
+        _overlayOn = new Map();
+        const cur = UFVState.selectedStructure();
+        if (!cur || cur.source === 'Custom') return;
+        const cands = UFVState.state.structures.map((st, i) => ({ st, i }))
+            .filter(({ st }) => st.url !== cur.url && st.url && st.source !== 'Custom' && (st.mappedRanges || []).length);
+        if (!cands.length) return;
+        const wrap = document.createElement('span');
+        wrap.id = 'ufv-overlay-wrap'; wrap.className = 'ufv-dropdown ufv-partner-dropdown';
+        wrap.innerHTML = '<button type="button" class="ufv-dropdown-btn" title="Superpose other structures of this protein onto the current one">Overlay <span class="ufv-dropdown-caret">▾</span></button>'
+            + '<div class="ufv-dropdown-menu ufv-overlay-menu"></div>';
+        const menu = wrap.querySelector('.ufv-dropdown-menu');
+        cands.forEach(({ st, i }) => {
+            const row = document.createElement('label');
+            row.className = 'ufv-dropdown-check';
+            row.innerHTML = '<input type="checkbox"><span class="ufv-overlay-swatch"></span><span class="ufv-overlay-label"></span><span class="ufv-overlay-status"></span>';
+            row.querySelector('.ufv-overlay-label').textContent = stLabel(st);
+            row.title = stLabel(st);
+            const inp = row.querySelector('input');
+            inp.addEventListener('change', () => toggleOverlay(i, st, row, menu));
+            menu.appendChild(row);
+        });
+        const note = document.createElement('div');
+        note.className = 'ufv-overlay-note';
+        note.textContent = `Fitted on Cα atoms of shared UniProt residues; up to ${OVERLAY_COLORS.length} at once. Display only: annotations stay on the main structure.`;
+        menu.appendChild(note);
+        host.appendChild(wrap);
+        wireDropdown(wrap, wrap.querySelector('.ufv-dropdown-btn'));
+        menu.addEventListener('click', e => e.stopPropagation()); // ticking keeps the menu open
+    }
+    async function toggleOverlay(i, st, row, menu) {
+        const id = 'ov' + i;
+        const inp = row.querySelector('input'), sw = row.querySelector('.ufv-overlay-swatch'), status = row.querySelector('.ufv-overlay-status');
+        const reset = (msg = '', title = '') => { _overlayOn.delete(i); inp.checked = false; sw.style.background = ''; status.textContent = msg; status.title = title; syncOverlayMenu(menu); };
+        if (!inp.checked) { reset(); StructureViewer.removeOverlay(id); return; }
+        const color = OVERLAY_COLORS.find(c => ![..._overlayOn.values()].includes(c));
+        if (!color) { inp.checked = false; return; }
+        _overlayOn.set(i, color); sw.style.background = color; status.textContent = '…'; status.title = 'Loading and fitting';
+        syncOverlayMenu(menu);
+        const mainUrl = UFVState.selectedStructure()?.url;
+        let r;
+        try { r = await StructureViewer.addOverlay(id, st, color, UFVState.state.sequence.length); }
+        catch (e) { r = { ok: false, error: e.message }; }
+        if (UFVState.selectedStructure()?.url !== mainUrl) return;            // main structure changed meanwhile
+        if (_overlayOn.get(i) !== color) { if (r?.ok) StructureViewer.removeOverlay(id); return; } // unticked meanwhile
+        if (r?.ok) { status.textContent = `${r.rmsd.toFixed(1)} Å`; status.title = `Cα RMSD over ${r.n} shared residues`; }
+        else reset('failed', r?.error || 'Could not superpose');
+    }
+    function syncOverlayMenu(menu) {
+        const full = _overlayOn.size >= OVERLAY_COLORS.length;
+        menu.querySelectorAll('input').forEach(x => { x.disabled = full && !x.checked; });
+        byId('ufv-overlay-wrap')?.classList.toggle('ufv-active', _overlayOn.size > 0);
     }
 
     // Partner-protein support (other UniProt entries present as separate chains in this structure).
@@ -951,6 +1021,9 @@ const UFVModal = (() => {
         const drop = byId('ufv-cs-drop');
         drop.textContent = '';
         const idx = UFVState.state.selectedStructureIndex;
+        // Structures discovered in the background join the Overlay menu (only while none is overlaid,
+        // so an active overlay's menu row and colour are never rebuilt under it).
+        if (!_overlayOn.size && StructureViewer.currentStructure?.url === UFVState.selectedStructure()?.url) updateOverlayToggle();
         UFVState.state.structures.forEach((st, i) => {
             const opt = document.createElement('div');
             opt.className = 'ufv-cs-opt' + (i === idx ? ' selected' : '');
@@ -1259,6 +1332,8 @@ const UFVModal = (() => {
         byId('ufv-brush-var')?.classList.toggle('active', isDis);
         byId('ufv-brush-dis')?.classList.toggle('active', isCons);
         byId('ufv-brush-prov')?.classList.toggle('active', isProv);
+        byId('ufv-brush-af')?.classList.toggle('active', sc && _colorProfile === 'afBin');
+        byId('ufv-brush-subst')?.classList.toggle('active', sc && _colorProfile === 'substClass');
         byId('ufv-brush-vsite')?.classList.toggle('active', isSites);
         // Dynamically-built section C buttons (feature/PTM windows) — tagged with data-profile.
         // 'domains' tracks the backbone-colouring toggle, not the sphere _colorProfile.
@@ -1270,7 +1345,7 @@ const UFVModal = (() => {
         const sel = UFVState.state.featDiseases;
         return diseaseVariants().map(v => {
             let color;
-            if (_colorProfile === 'consequence' || _colorProfile === 'provenance' || _colorProfile === 'sites') {
+            if (VARIANT_AXES[_colorProfile] || _colorProfile === 'sites') {
                 color = v.consequenceColor;
             } else {
                 // Use color of first disease that's selected; grey for "Other" variants (no named disease match)
@@ -1382,12 +1457,143 @@ const UFVModal = (() => {
     // Preserves the existing section's expand/collapse state so the domain C (which rebuilds the window)
     // doesn't snap the section shut under the user's cursor.
     function appendDomainSection(panelId) {
+        appendCustomSection(panelId); // every static panel also hosts the custom-annotation layer
         if (!(UFVState.state.domains || []).length) return;
         const panel = byId(panelId);
         const existing = panel?.querySelector('[data-ufv-domains]');
         const wasExpanded = existing && !existing.querySelector('.ufv-collapsible-body')?.classList.contains('ufv-collapsed');
         existing?.remove();
         panel?.appendChild(buildDomainSection(wasExpanded));
+    }
+
+    // ── Custom annotations ───────────────────────────────────────────────────
+    // A user CSV/TSV of residue-level annotations, drawn as an extra sphere layer in every window and
+    // exported in the CSV. Session-only and tied to the accession it was loaded for. Columns (header
+    // names are matched loosely; without a header: position, label, value):
+    //   position (123, R123W, p.Arg123Trp or a range 120-130), label, value, color, note.
+    const CUSTOM_PALETTE = ['#0072b2', '#e69f00', '#009e73', '#cc79a7', '#56b4e9', '#d55e00', '#f0e442', '#999999'];
+    const CUSTOM_MAX_RANGE = 2000;
+    let _customAnn = null; // { accession, fileName, items: [{position, label, value, note}], groups: Map(label -> {color, visible, count}), skipped }
+
+    function parseCustomAnnotations(text, seqLen) {
+        const rows = text.split(/\r?\n/).map(l => l.trim()).filter(l => l && !l.startsWith('#'));
+        if (!rows.length) return { items: [], skipped: 0, colors: new Map() };
+        const delim = rows[0].includes('\t') ? '\t' : rows[0].includes(';') && !rows[0].includes(',') ? ';' : ',';
+        const split = l => l.split(delim).map(c => c.trim().replace(/^"(.*)"$/, '$1'));
+        const head = split(rows[0]).map(h => h.toLowerCase());
+        const find = re => head.findIndex(h => re.test(h));
+        let col = { pos: find(/^(position|pos|residue|resi|resid|resnum|site|variant|mutation|aa_?change)$/),
+                    label: find(/^(label|category|group|type|class|name|annotation)$/),
+                    value: find(/^(value|score|val)$/), color: find(/^colou?r$/), note: find(/^(note|description|comment|desc)$/) };
+        const hasHeader = col.pos >= 0;
+        if (!hasHeader) col = { pos: 0, label: 1, value: 2, color: -1, note: -1 };
+        const items = [], colors = new Map();
+        let skipped = 0;
+        rows.slice(hasHeader ? 1 : 0).forEach(r => {
+            const c = split(r), raw = c[col.pos] || '';
+            const range = /^(\d+)\s*[-–]\s*(\d+)$/.exec(raw), num = /(\d+)/.exec(raw);
+            const [a, b] = range ? [+range[1], +range[2]] : num ? [+num[1], +num[1]] : [NaN, NaN];
+            if (!(a >= 1 && b >= a && b <= seqLen && b - a < CUSTOM_MAX_RANGE)) { skipped++; return; }
+            const label = (col.label >= 0 && c[col.label]) || 'Custom';
+            const vNum = col.value >= 0 ? Number(c[col.value]) : NaN;
+            const value = col.value >= 0 && c[col.value] != null && c[col.value] !== '' ? (Number.isFinite(vNum) ? vNum : c[col.value]) : null;
+            const note = col.note >= 0 ? (c[col.note] || '') : '';
+            const color = col.color >= 0 ? c[col.color] : '';
+            if (color && /^#?[0-9a-f]{6}$/i.test(color) && !colors.has(label)) colors.set(label, color.startsWith('#') ? color : '#' + color);
+            for (let p = a; p <= b; p++) items.push({ position: p, label, value, note });
+        });
+        return { items, skipped, colors };
+    }
+
+    function loadCustomAnnotationFile(file) {
+        const s = UFVState.state;
+        const reader = new FileReader();
+        reader.onload = () => {
+            const { items, skipped, colors } = parseCustomAnnotations(String(reader.result || ''), (s.sequence || '').length);
+            const groups = new Map();
+            items.forEach(it => {
+                if (!groups.has(it.label)) groups.set(it.label, { color: colors.get(it.label) || CUSTOM_PALETTE[groups.size % CUSTOM_PALETTE.length], visible: true, count: 0 });
+                groups.get(it.label).count++;
+            });
+            _customAnn = { accession: s.uniprotId, fileName: file.name, items, groups, skipped };
+            refreshCustomSections(true);
+            applyMode();
+        };
+        reader.readAsText(file);
+    }
+
+    function activeCustomAnnotations() {
+        if (!_customAnn || _customAnn.accession !== UFVState.state.uniprotId) return [];
+        return _customAnn.items.filter(it => _customAnn.groups.get(it.label)?.visible);
+    }
+    // Sphere list for the viewers' `extras` slot (one sphere per position; hover lists every row there).
+    function customSpheres() {
+        const byPos = new Map();
+        activeCustomAnnotations().forEach(it => {
+            const txt = it.label + (it.value != null ? ` = ${it.value}` : '') + (it.note ? ` (${it.note})` : '');
+            const ex = byPos.get(it.position);
+            if (ex) ex.hover.description += `; ${txt}`;
+            else byPos.set(it.position, { position: it.position, color: _customAnn.groups.get(it.label).color, hover: { position: it.position, category: 'Custom', description: txt } });
+        });
+        return [...byPos.values()];
+    }
+    // Per-position text for the CSV export ('' when nothing loaded at that position).
+    function customAnnotationText(pos) {
+        if (!_customAnn || _customAnn.accession !== UFVState.state.uniprotId) return '';
+        return _customAnn.items.filter(it => it.position === pos)
+            .map(it => it.label + (it.value != null ? `=${it.value}` : '') + (it.note ? ` (${it.note})` : '')).join('; ');
+    }
+
+    function buildCustomSection(expanded = false) {
+        const loaded = _customAnn && _customAnn.accession === UFVState.state.uniprotId ? _customAnn : null;
+        const setAll = vis => { loaded?.groups.forEach(g => { g.visible = vis; }); refreshCustomSections(); applyMode(); };
+        const sec = makeCollapsibleSection('Custom annotations', loaded ? { onAll: () => setAll(true), onNone: () => setAll(false), expanded } : { expanded });
+        sec.box.setAttribute('data-ufv-custom', '1');
+        const acts = sec.box.querySelector('.ufv-section-actions');
+        const mk = (label, title, fn) => { const b = document.createElement('button'); b.className = 'ufv-section-btn'; b.textContent = label; b.title = title; b.addEventListener('click', e => { e.stopPropagation(); fn(); }); return b; };
+        acts.appendChild(mk('Load', loaded ? 'Replace with another CSV/TSV file' : 'Load a CSV/TSV of residue annotations', () => {
+            let inp = byId('ufv-custom-ann-input');
+            if (!inp) {
+                inp = document.createElement('input');
+                inp.type = 'file'; inp.id = 'ufv-custom-ann-input'; inp.accept = '.csv,.tsv,.txt'; inp.style.display = 'none';
+                inp.addEventListener('change', () => { if (inp.files[0]) loadCustomAnnotationFile(inp.files[0]); inp.value = ''; });
+                document.body.appendChild(inp);
+            }
+            inp.click();
+        }));
+        if (loaded) acts.appendChild(mk('✕', 'Remove the custom annotations', () => { _customAnn = null; refreshCustomSections(); applyMode(); }));
+        if (!loaded) {
+            const hint = document.createElement('div');
+            hint.className = 'ufv-empty';
+            hint.textContent = 'Load a CSV or TSV with a position column (123, R123W or 120-130) and optional label, value, color and note columns. Kept for this session only.';
+            sec.body.appendChild(hint);
+            return sec.box;
+        }
+        const meta = document.createElement('div');
+        meta.className = 'ufv-custom-meta';
+        meta.textContent = `${loaded.fileName}: ${loaded.items.length} residue${loaded.items.length === 1 ? '' : 's'}`
+            + (loaded.skipped ? `, ${loaded.skipped} row${loaded.skipped === 1 ? '' : 's'} skipped (no valid position)` : '');
+        sec.body.appendChild(meta);
+        loaded.groups.forEach((g, label) => sec.body.appendChild(
+            makeFilterItem(label, g.color, g.count, g.visible, checked => { g.visible = checked; applyMode(); })));
+        return sec.box;
+    }
+    // Add or rebuild the section in every panel that hosts one, keeping each section's expand state.
+    function refreshCustomSections(forceExpand = false) {
+        ['ufv-ptm-panel', 'ufv-var-panel', 'ufv-feat-panel', 'ufv-dom-panel'].forEach(pid => {
+            const existing = byId(pid)?.querySelector('[data-ufv-custom]');
+            if (!existing) return;
+            const wasExpanded = forceExpand || !existing.querySelector('.ufv-collapsible-body')?.classList.contains('ufv-collapsed');
+            existing.replaceWith(buildCustomSection(wasExpanded));
+        });
+    }
+    function appendCustomSection(panelId) {
+        const panel = byId(panelId);
+        if (!panel) return;
+        const existing = panel.querySelector('[data-ufv-custom]');
+        const wasExpanded = existing && !existing.querySelector('.ufv-collapsible-body')?.classList.contains('ufv-collapsed');
+        existing?.remove();
+        panel.appendChild(buildCustomSection(wasExpanded));
     }
 
     // ── Chimeric partner section ─────────────────────────────────────────────
@@ -1671,6 +1877,7 @@ const UFVModal = (() => {
 
         // Ligands present in the model (e.g. SwissModel/AlphaFill cofactors) — shown whenever any
         // exist, so the window reflects everything in the system, not just the protein.
+        panel.appendChild(buildCustomSection());
         const ligSec = buildDynamicLigandSection();
         if (ligSec) panel.appendChild(ligSec);
     }
@@ -1726,6 +1933,7 @@ const UFVModal = (() => {
         panel.appendChild(buildDiseaseVariantSection());       // disease variants (off by default)
         layerSection('Family & Domains', s.domains || [], featureLabel,
             { onBrush: toggleDomainCartoon, brushProfile: 'domains', brushTitle: 'Colour the backbone by domain' });
+        panel.appendChild(buildCustomSection());
         const ligSec = buildDynamicLigandSection();
         if (ligSec) panel.appendChild(ligSec);
     }
@@ -1741,7 +1949,7 @@ const UFVModal = (() => {
         const mode = getColorMode();
         // Additive AND filter across the three axes, PLUS any variants force-shown via an individual
         // disease-dropdown row (those render even when their disease axis is off), MINUS hidden ones.
-        const _base = DataProcessor.filterVariants(s.variants, s.activeConsequences, s.activeProvenances, s.activeDiseases);
+        const _base = DataProcessor.filterVariants(s.variants, s.activeConsequences, s.activeProvenances, s.activeDiseases, s.activeAfBins, s.activeSubstClasses);
         const _baseKeys = new Set(_base.map(variantKey));
         const _forced = _forcedVariantKeys.size
             ? s.variants.filter(v => _forcedVariantKeys.has(variantKey(v)) && !_baseKeys.has(variantKey(v)))
@@ -1769,7 +1977,7 @@ const UFVModal = (() => {
         const siteList = activeSites();
         const sitePositions = siteList.flatMap(x => x.endPosition && x.endPosition !== x.position ? [x.position, x.endPosition] : [x.position]);
         if (cm === 'ptm') {
-            const dsph = diseaseSpheres();
+            const dsph = diseaseSpheres().concat(customSpheres());
             const n = StructureViewer.showPTMs(s.ptms, s.ptmGroups, siteList, dsph);
             // Copy reflects EVERYTHING shown in the PTM window — PTM sites, functional sites AND any
             // selected disease-variant spheres (previously the diseases were drawn but omitted from copy).
@@ -1791,17 +1999,21 @@ const UFVModal = (() => {
                     const dc = (firstActiveDis && _diseaseColorMap.get(firstActiveDis)) || '#9e9e9e';
                     return { ...v, consequenceColor: dc };
                 });
-            } else if (_colorProfile === 'provenance') {
+            } else if (_colorProfile !== 'consequence' && VARIANT_AXES[_colorProfile]) {
+                // provenance / afBin / substClass: colour by that axis's category palette.
+                const cats = VARIANT_AXES[_colorProfile].cats;
                 variantsColored = filteredVariants.map(v => ({
                     ...v,
-                    consequenceColor: DataProcessor.PROVENANCE_CATEGORIES[v.provenance]?.color || '#9e9e9e',
+                    consequenceColor: cats[v[_colorProfile]]?.color || '#9e9e9e',
                 }));
             } // 'consequence' / 'sites' / 'ptm' ⇒ keep natural consequenceColor
-            const r = StructureViewer.showVariants(variantsColored, coPtms, siteList);
+            const csph = customSpheres();
+            const r = StructureViewer.showVariants(variantsColored, coPtms, siteList, csph);
             s.displayedPositions = Array.from(new Set([
                 ...filteredVariants.map(v => v.position),
                 ...coPtms.flatMap(p => p.endPosition && p.endPosition !== p.position ? [p.position, p.endPosition] : [p.position]),
                 ...sitePositions,
+                ...csph.map(sp => sp.position),
             ]));
             const ptmNote = r.ptmCount ? `, ${r.ptmCount} PTM site${r.ptmCount === 1 ? '' : 's'}` : '';
             byId('ufv-count-text').textContent = `${r.varCount} variants at ${r.posCount} positions${ptmNote}${rangeNote}`;
@@ -1817,6 +2029,7 @@ const UFVModal = (() => {
             }
             activePtms().forEach(p => spheres.push({ position: p.position, endPosition: p.endPosition, color: p.color, hover: p }));
             diseaseSpheres().forEach(sp => spheres.push(sp));
+            customSpheres().forEach(sp => spheres.push(sp));
             StructureViewer.showAnnotationSpheres(spheres);
             s.displayedPositions = [...new Set(spheres.flatMap(sp => sp.endPosition && sp.endPosition !== sp.position ? [sp.position, sp.endPosition] : [sp.position]))];
             if (cm === 'structure' || cm === 'subcellular') {
@@ -2390,8 +2603,8 @@ const UFVModal = (() => {
 
     function buildVariantFilters() {
         const s = UFVState.state;
-        fillFilterList('ufv-prov-list', DataProcessor.getProvenanceSummary(s.variants), s.activeProvenances, 'provenance');
-        fillFilterList('ufv-cons-list', DataProcessor.getConsequenceSummary(s.variants), s.activeConsequences, 'consequence');
+        Object.entries(VARIANT_AXES).forEach(([dim, ax]) =>
+            fillFilterList(ax.list, DataProcessor.getCategorySummary(s.variants, dim, ax.cats), s[ax.set], dim));
         buildVariantPtmFilters();
         const { names: diseasesToShow, ds } = diseaseNamesToShow();
         const dis = byId('ufv-dis-section');
@@ -2460,6 +2673,7 @@ const UFVModal = (() => {
 
         const track = document.createElement('div');
         track.className = 'ufv-seq-track';
+        if (chain != null) track.dataset.chain = chain;
         if (label) {
             const lab = document.createElement('span');
             lab.className = 'ufv-seq-chain-label';
@@ -2491,7 +2705,12 @@ const UFVModal = (() => {
                 const tier = tierMap.get(pos);
                 if (tier) { span.classList.add('feature'); span.style.boxShadow = `inset 0 -3px 0 ${tierColors[tier]}`; }
             }
-            if (!missing) span.addEventListener('click', () => onClick({ position: pos, variants: s.variants.filter(v => v.position === pos) }, 'sequence', chain));
+            span.dataset.pos = pos;
+            if (!missing) {
+                span.addEventListener('click', () => onClick({ position: pos, variants: s.variants.filter(v => v.position === pos) }, 'sequence', chain));
+                span.addEventListener('mouseenter', () => StructureViewer.highlightResidue(pos, chain));
+                span.addEventListener('mouseleave', () => StructureViewer.highlightResidue(null));
+            }
             row.appendChild(span);
         });
         track.appendChild(row);
@@ -2599,6 +2818,22 @@ const UFVModal = (() => {
                 present.forEach(([color, label]) => appendLegendItem(color, label));
             }
         }
+    }
+
+    // Mirror a 3D hover onto the sequence strip: outline the residue and, if it is outside the strip's
+    // visible rows, scroll only the strip (never the page). pos == null clears the mark.
+    function markSequenceHover(pos, chain) {
+        const wrap = byId('ufv-sequence-wrap');
+        if (!wrap) return;
+        wrap.querySelectorAll('.ufv-seq-aa.hovered').forEach(el => el.classList.remove('hovered'));
+        if (pos == null) return;
+        const tracks = [...wrap.querySelectorAll('.ufv-seq-track')];
+        const track = tracks.find(t => t.dataset.chain != null && t.dataset.chain === String(chain)) || tracks[0];
+        const span = track?.querySelector(`.ufv-seq-aa[data-pos="${pos}"]`);
+        if (!span) return;
+        span.classList.add('hovered');
+        const r = span.getBoundingClientRect(), w = wrap.getBoundingClientRect();
+        if (r.top < w.top || r.bottom > w.bottom) wrap.scrollTop += r.top - w.top - wrap.clientHeight / 2;
     }
 
     function onHover(data, mode, event) {
@@ -4509,9 +4744,21 @@ const UFVModal = (() => {
     // also auto-select (propagate) the values those variants carry on the OTHER two axes. So checking
     // "DRVT" ticks DRVT's consequence + provenance values too, and the DRVT variants appear. Checking
     // a second value adds its variants on top; unchecking removes only that one value. None ⇒ nothing.
+    // Categorical variant axes (disease is handled separately: multi-valued, page-scoped list).
+    const VARIANT_AXES = {
+        consequence: { set: 'activeConsequences', list: 'ufv-cons-list',  cats: DataProcessor.CONSEQUENCE_CATEGORIES },
+        provenance:  { set: 'activeProvenances',  list: 'ufv-prov-list',  cats: DataProcessor.PROVENANCE_CATEGORIES },
+        afBin:       { set: 'activeAfBins',       list: 'ufv-af-list',    cats: DataProcessor.AF_CATEGORIES },
+        substClass:  { set: 'activeSubstClasses', list: 'ufv-subst-list', cats: DataProcessor.SUBST_CATEGORIES },
+    };
+    function initVariantAxes(s) {
+        Object.entries(VARIANT_AXES).forEach(([dim, ax]) => {
+            s[ax.set] = new Set(Object.keys(DataProcessor.getCategorySummary(s.variants, dim, ax.cats)));
+        });
+    }
     function variantFilterSet(dim) {
         const s = UFVState.state;
-        return dim === 'consequence' ? s.activeConsequences : dim === 'provenance' ? s.activeProvenances : s.activeDiseases;
+        return VARIANT_AXES[dim] ? s[VARIANT_AXES[dim].set] : s.activeDiseases;
     }
     function variantMatchesValue(v, dim, value) {
         if (dim === 'disease') return (v.diseases || []).includes(value);
@@ -4521,8 +4768,9 @@ const UFVModal = (() => {
     // checking one disease would tick every disease that co-occurs on its multi-disease variants).
     function propagateVariant(v, skipDim) {
         const s = UFVState.state;
-        if (skipDim !== 'consequence' && s.activeConsequences && DataProcessor.CONSEQUENCE_CATEGORIES[v.consequence]) s.activeConsequences.add(v.consequence);
-        if (skipDim !== 'provenance' && s.activeProvenances && DataProcessor.PROVENANCE_CATEGORIES[v.provenance]) s.activeProvenances.add(v.provenance);
+        Object.entries(VARIANT_AXES).forEach(([dim, ax]) => {
+            if (skipDim !== dim && s[ax.set] && ax.cats[v[dim]]) s[ax.set].add(v[dim]);
+        });
         if (skipDim !== 'disease' && s.activeDiseases) {
             (v.diseases || []).filter(d => d !== '__other__').forEach(d => s.activeDiseases.add(d));
         }
@@ -4535,8 +4783,7 @@ const UFVModal = (() => {
             document.querySelectorAll(`#${id} input[type="checkbox"]`).forEach(cb => { cb.checked = set.has(cb.dataset.ufvVal); });
         };
         apply('ufv-dis-list', s.activeDiseases);
-        apply('ufv-cons-list', s.activeConsequences);
-        apply('ufv-prov-list', s.activeProvenances);
+        Object.values(VARIANT_AXES).forEach(ax => apply(ax.list, s[ax.set]));
     }
     function toggleVariantFilter(dim, value, checked) {
         const set = variantFilterSet(dim);
@@ -4552,13 +4799,12 @@ const UFVModal = (() => {
         const s = UFVState.state;
         const target = variantFilterSet(section);
         if (!target) return;
-        const id = section === 'consequence' ? 'ufv-cons-list' : section === 'provenance' ? 'ufv-prov-list' : 'ufv-dis-list';
+        const id = VARIANT_AXES[section]?.list || 'ufv-dis-list';
         if (!select) {
-            // None on any axis clears ALL three variant axes: the axes are coupled, so emptying one
+            // None on any axis clears ALL variant axes: the axes are coupled, so emptying one
             // would hide everything anyway — keeping the other boxes ticked would be misleading.
             s.activeDiseases?.clear();
-            s.activeConsequences?.clear();
-            s.activeProvenances?.clear();
+            Object.values(VARIANT_AXES).forEach(ax => s[ax.set]?.clear());
         } else {
             // Select every value shown in this section, then propagate so the other axes admit them.
             document.querySelectorAll(`#${id} input[type="checkbox"]`).forEach(cb => target.add(cb.dataset.ufvVal));
@@ -4618,7 +4864,12 @@ const UFVModal = (() => {
             } catch (_) { protvarByPos = null; }
             byId('ufv-loading').classList.add('hidden');
         }
-        const text = UFVExport.buildResidueMatrix(s.sequence, s.ptms, s.ptmGroups || {}, s.variants, s.amMap, s.analysis, UFVState.selectedStructure(), s.sites, s.mutagenesis, protvarByPos);
+        let text = UFVExport.buildResidueMatrix(s.sequence, s.ptms, s.ptmGroups || {}, s.variants, s.amMap, s.analysis, UFVState.selectedStructure(), s.sites, s.mutagenesis, protvarByPos);
+        if (_customAnn && _customAnn.accession === s.uniprotId) {
+            // Append the user's custom annotations as a final column (rows start with the UniProt position).
+            const q = v => /[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v;
+            text = text.split('\n').map((l, i) => i === 0 ? `${l},custom_annotation` : l ? `${l},${q(customAnnotationText(parseInt(l, 10)))}` : l).join('\n');
+        }
         UFVExport.downloadText(`${s.uniprotId}_residue_annotations${withProtVar ? '_protvar' : ''}.csv`, text, 'text/csv');
     }
 
@@ -4749,8 +5000,7 @@ const UFVModal = (() => {
                 if (UFVState.state.uniprotId !== requestedId) return;
                 Object.assign(s, data);
                 s.ptmGroups = DataProcessor.groupPTMsByCategory(s.ptms);
-                s.activeConsequences = new Set(Object.keys(DataProcessor.getConsequenceSummary(s.variants)));
-                s.activeProvenances = new Set(Object.keys(DataProcessor.getProvenanceSummary(s.variants)));
+                initVariantAxes(s);
                 s.analysis.alphaMissense = UFVAnalysis.aggregateAlphaMissense(s.variants, s.amMap);
                 DataProcessor.computeDiseaseColors(s.variants);
             const _ds = DataProcessor.getDiseaseSummary(s.variants);

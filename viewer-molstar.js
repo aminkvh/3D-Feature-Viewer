@@ -92,6 +92,14 @@ const MolstarViewer = (() => {
     if (!m || m.ns !== NS) return;
     if (m.evt === 'ready') { if (readyResolve) readyResolve(); return; }
     if (m.evt === 'atoms') { atoms = m.atoms || []; const a = (liveRef || api); a._buildObservedResiCache(); if (a.observedResiCb) { try { a.observedResiCb(); } catch (_) {} } return; }
+    if (m.evt === 'hoverRes') {
+      const a = (liveRef || api); if (!a.seqHoverCb) return;
+      const our = a.currentStructure?.chainIds;
+      const partner = Array.isArray(our) && our.length && m.chain != null && !our.includes(m.chain);
+      if (m.resi == null || partner) { a.seqHoverCb(null); return; }
+      a.seqHoverCb(a._reverseResidueMapForChain(m.chain).get(m.resi) || m.resi, m.chain);
+      return;
+    }
     if (m.evt === 'pick') {
       if (m.kind === 'click') { if (_clickFn && m.atom) _clickFn(m.atom); }
       else if (m.kind === 'hover') { if (m.atom) { if (_hoverFn) _hoverFn(m.atom, null, {}); } else if (_hoverOutFn) _hoverOutFn(); }
@@ -782,8 +790,8 @@ const MolstarViewer = (() => {
       this._activeSpheres = active; this._bindHover(hoverMap, 'feature'); this.viewer.render();
       return count;
     },
-    showVariants(filtered, coPtms = [], sites = []) {
-      this._selectedResi = null; this._lastRender = () => this.showVariants(filtered, coPtms, sites);
+    showVariants(filtered, coPtms = [], sites = [], extras = []) {
+      this._selectedResi = null; this._lastRender = () => this.showVariants(filtered, coPtms, sites, extras);
       const severity = ['Likely pathogenic or pathogenic', 'Predicted deleterious', 'Uncertain significance', 'Likely benign or benign'];
       const posMap = new Map();
       (filtered || []).forEach(v => {
@@ -802,6 +810,7 @@ const MolstarViewer = (() => {
         if (ptm.endPosition && ptm.endPosition !== ptm.position && !posMap.has(ptm.endPosition)) { if (this.allChainsAddStyle(ptm.endPosition, { sphere: { radius: 1.8, color: ptm.color, opacity: 0.92 } }, { atom: 'CA' })) active.set(ptm.endPosition, ptm.color); }
       });
       this._drawSiteSpheres(sites, hoverMap, active);
+      (extras || []).forEach(sp => { if (sp.position == null || posMap.has(sp.position)) return; if (this.allChainsAddStyle(sp.position, { sphere: { radius: 1.8, color: sp.color, opacity: 0.92 } }, { atom: 'CA' })) { active.set(sp.position, sp.color); if (sp.hover && !hoverMap.has(sp.position)) hoverMap.set(sp.position, sp.hover); } });
       this._activeSpheres = active; this._bindHover(hoverMap, 'variant'); this.viewer.render();
       return { posCount, varCount, ptmCount };
     },
@@ -1010,6 +1019,44 @@ const MolstarViewer = (() => {
     // _annotations and opts are passed by modal.js but were previously ignored.
     // opts.rezoom === false means "update sticks/exclusion region but don't move camera" —
     // used by applyMode() when re-applying focus after a filter/colour toggle.
+    // UniProt position → [chain, author resi] in ANY structure record (not just the loaded one), from its
+    // own mappedRanges restricted to its selected chain. Mirrors _resiToPdb. null when unmapped.
+    _uniToPdbIn(st, pos) {
+      const r = (st.mappedRanges || []).find(x => pos >= x.uniprotStart && pos <= x.uniprotEnd && (!st.chainId || !x.chainId || x.chainId === st.chainId));
+      if (!r) return null;
+      const chain = r.chainId || st.chainId || null;
+      const map = (chain != null && st.chainSeqresToAuthor?.[chain]) || st.seqresToAuthor;
+      const resi = map ? (map.get((r.seqresStart ?? r.pdbStart) + (pos - r.uniprotStart)) ?? ((r.seqresStart ?? r.pdbStart) + (pos - r.uniprotStart)))
+                       : r.pdbStart + (pos - r.uniprotStart);
+      return [chain, resi];
+    },
+    // Superpose another structure onto the loaded one (Cα pairs matched by UniProt position) and draw it
+    // as a translucent uniform cartoon. Resolves to { ok, rmsd, n } or { ok:false, error }.
+    async addOverlay(id, st, color, seqLen) {
+      const prim = this.currentStructure; if (!prim) return { ok: false, error: 'no structure loaded' };
+      const pairs = [];
+      for (let pos = 1; pos <= seqLen; pos++) {
+        const a = this._uniToPdbIn(prim, pos), b = this._uniToPdbIn(st, pos);
+        if (a && b) pairs.push({ a, b });
+      }
+      if (pairs.length < 10) return { ok: false, error: 'too few shared residues' };
+      const f = inferFormat(st.url, st);
+      const format = typeof f === 'string' ? f : f.format, isBinary = typeof f === 'string' ? false : f.isBinary;
+      const data = await fetchStructureData(st.url, isBinary);
+      if (this.currentStructure !== prim) return { ok: false, error: 'main structure changed' }; // pairs are stale
+      const chains = (st.chainIds && st.chainIds.length) ? st.chainIds : (st.chainId ? [st.chainId] : null);
+      return await send('addOverlay', { id, data, format, isBinary, pairs, color, chains, label: st.label || id });
+    },
+    removeOverlay(id) { return send('removeOverlay', { id }).catch(() => {}); },
+
+    // Hover-highlight a UniProt position in 3D without moving the camera (null clears).
+    highlightResidue(resi, chain = null) {
+      if (resi == null) { send('highlight', {}).catch(() => {}); return; }
+      const sel = this.residueSelectorForChain(resi, chain);
+      if (sel.resi === -999999) return;
+      send('highlight', { chain: sel.chain != null ? sel.chain : chain, resi: sel.resi }).catch(() => {});
+    },
+
     focusResidue(resi, chain = null, _annotations = null, opts = {}) {
       this.clearPocket(); // a residue focus supersedes a pocket-surface highlight
       const wasFocused = !!this._inFocusMode; // moving residue→residue (already zoomed in) ⇒ pan, don't re-zoom

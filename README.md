@@ -12,6 +12,9 @@
 - Ligand and pocket context: PDBe-KB known sites, AlphaFill ligand context, PubChem/ChEMBL chemical links, and structure-based pocket inspection.
 - Open Targets tractability and drug evidence per protein.
 - Ligand similarity by CACTVS/Tanimoto fingerprint against AlphaFill transplants.
+- Filter and color variants by source (ClinVar, COSMIC/TCGA somatic, gnomAD population), allele frequency, and substitution type.
+- Load your own residue annotations (CSV/TSV) as an extra layer.
+- Superpose other structures of the protein onto the current one, with linked sequence/structure hover.
 - Export residue sets and annotation data to CSV.
 - **PyMOL and VMD plugins:** the same annotations and analyses on your own structures and MD trajectories.
 

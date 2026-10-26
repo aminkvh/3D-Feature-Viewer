@@ -702,12 +702,12 @@ proc ::ufv::view::keep {script} {
     set saved [get]
     set savedtop [molinfo top]
     incr depth
-    set code [catch { uplevel 1 $script } res]
-    set einfo $::errorInfo
+    # error info from the options dict: ::errorInfo does not exist before the interpreter's first error
+    set code [catch { uplevel 1 $script } res ropts]
     incr depth -1
     set v $saved; set saved ""
     catch { put $v $savedtop }
-    if {$code == 1} { return -code error -errorinfo $einfo $res }
+    if {$code == 1} { return -code error -errorinfo [dict get $ropts -errorinfo] $res }
     return $res
 }
 

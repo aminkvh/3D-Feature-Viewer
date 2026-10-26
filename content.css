@@ -317,6 +317,12 @@
 .ufv-dropdown-check:hover {
     background: var(--ufv-bg-hover);
 }
+.ufv-custom-meta { padding: 2px 8px 6px; font-size: 11px; color: var(--ufv-text-secondary); overflow-wrap: anywhere; }
+.ufv-overlay-menu { min-width: 250px; max-width: 340px; max-height: 320px; }
+.ufv-overlay-swatch { flex: 0 0 10px; height: 10px; border-radius: 2px; border: 1px solid var(--ufv-border-hover); }
+.ufv-overlay-label { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ufv-overlay-status { flex: 0 0 auto; color: var(--ufv-text-secondary); font-variant-numeric: tabular-nums; }
+.ufv-overlay-note { padding: 6px 10px 8px; font-size: 10.5px; line-height: 1.35; color: var(--ufv-text-secondary); border-top: 1px solid var(--ufv-border); }
 .ufv-dropdown-check input[type="checkbox"] {
     margin: 0;
     cursor: pointer;
@@ -1012,6 +1018,7 @@
 .ufv-seq-aa.variant { border-top-color: #ef5350; }
 .ufv-seq-aa.visible { background: var(--ufv-accent-bg); color: var(--ufv-accent); }
 .ufv-seq-aa.nearby { outline: 1px solid #7b1fa2; }
+.ufv-seq-aa.hovered, .ufv-seq-aa:not(:disabled):hover { outline: 2px solid var(--ufv-accent); outline-offset: -1px; }
 .ufv-seq-aa.selected { background: #ffffff; color: #111827; border-color: var(--ufv-accent); }
 
 .ufv-legend {
